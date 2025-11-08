@@ -26,7 +26,7 @@ https://github.com/user-attachments/assets/86105b9b-ff49-41de-8fd8-dbf25e3e0b26
 ### Installation
 Please follow the instructions in [INSTALL.md](INSTALL.md) to set up the environment.
 
-## Downloading Data
+### Downloading Data
 Please run the following script to download the required data:
 ```bash
 bash fetch_data.sh
