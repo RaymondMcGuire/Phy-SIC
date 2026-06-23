@@ -4,7 +4,7 @@ json_tricks
 matplotlib
 munkres
 numpy
-opencv-python
+opencv-python-headless
 pillow
 scipy
 torchvision

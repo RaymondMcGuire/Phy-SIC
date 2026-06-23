@@ -42,7 +42,8 @@ WORKDIR /workspace/Phy-SIC
 
 COPY . .
 
-RUN uv lock && uv sync --frozen --no-dev
+RUN uv lock
+RUN uv sync --frozen --no-dev
 RUN uv pip install --python /opt/physic/.venv/bin/python --no-deps \
     "sam-2 @ git+https://github.com/facebookresearch/segment-anything-2@c2ec8e14a185632b0a5d8b161928ceb50197eddc"
 RUN uv run mim install "mmcv==1.3.9" --no-deps && uv run mim install "mmdet<3"
