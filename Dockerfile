@@ -56,6 +56,7 @@ RUN --mount=type=cache,target=/root/.cache/uv uv lock
 RUN --mount=type=cache,target=/root/.cache/uv uv sync --frozen --no-dev
 RUN --mount=type=cache,target=/root/.cache/uv uv pip install --python /opt/physic/.venv/bin/python --no-deps \
     "sam-2 @ git+https://github.com/facebookresearch/segment-anything-2@c2ec8e14a185632b0a5d8b161928ceb50197eddc"
+RUN --mount=type=cache,target=/root/.cache/uv uv pip install --python /opt/physic/.venv/bin/python "setuptools==69.5.1"
 RUN uv run mim install "mmcv==1.3.9" --no-deps && uv run mim install "mmdet<3"
 
 ENV PATH="/opt/physic/.venv/bin:${PATH}" \
