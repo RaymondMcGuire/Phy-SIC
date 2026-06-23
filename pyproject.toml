@@ -87,6 +87,9 @@ py-modules = ["human", "image_helpers", "optimizer", "run_optimizer", "scene"]
 [tool.setuptools.packages.find]
 include = ["models*", "utils*"]
 
+[tool.uv]
+environments = ["sys_platform == 'linux'"]
+
 [[tool.uv.index]]
 name = "pytorch-cu121"
 url = "https://download.pytorch.org/whl/cu121"
