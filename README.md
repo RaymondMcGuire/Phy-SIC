@@ -24,20 +24,23 @@ https://github.com/user-attachments/assets/86105b9b-ff49-41de-8fd8-dbf25e3e0b26
 ## Getting Started
 
 ### Installation
-Please follow the instructions in [INSTALL.md](INSTALL.md) to set up the environment.
+Please follow the Docker + uv instructions in [INSTALL.md](INSTALL.md). The
+supported setup is WSL2 Ubuntu 22.04 + Docker Desktop + an Ubuntu CUDA 12.1
+container.
 
 ### Downloading Data
-Please run the following script to download the required data:
-```bash
-bash fetch_data.sh
+On Windows, use the PowerShell downloader:
+```bat
+scripts\fetch-data-win.bat
 ```
 
 This requires access to [SMPL](https://smpl.is.tue.mpg.de/), [SMPL-X](https://smpl-x.is.tue.mpg.de/), [AGORA](https://agora.is.tue.mpg.de/), and [CameraHMR](https://camerahmr.is.tue.mpg.de/). Please enter the credentials when prompted.
 
 ### Running the Code
-To run the code, please copy images to the `images/` directory. Then, execute the following command:
+Build the container, copy images to the mounted `images/` directory, then run:
 ```bash
-python run_optimizer.py
+docker compose build
+docker compose run --rm physic uv run python run_optimizer.py
 ```
 This will save the results in the `outputs/` directory.
  

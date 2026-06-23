@@ -1,0 +1,107 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "physic"
+version = "0.1.0"
+description = "PhySIC: physically plausible 3D human-scene interaction and contact from a single image."
+readme = "README.md"
+requires-python = ">=3.10,<3.11"
+license = { text = "See LICENSE" }
+dependencies = [
+  "setuptools>=68",
+  "wheel",
+  "ninja==1.11.1.3",
+  "torch==2.3.1",
+  "torchvision==0.18.1",
+  "torchaudio==2.3.1",
+  "numpy==1.26.4",
+  "opencv-python-headless==4.10.0.84",
+  "pillow",
+  "scipy",
+  "scikit-image",
+  "scikit-learn",
+  "matplotlib",
+  "imageio",
+  "tqdm",
+  "omegaconf",
+  "hydra-core",
+  "yacs==0.1.8",
+  "loguru==0.7.3",
+  "pandas",
+  "trimesh",
+  "smplx==0.1.28",
+  "open3d==0.18.0",
+  "pyrender==0.1.45",
+  "pyopengl",
+  "rtree",
+  "HTML4Vision==0.4.3",
+  "plyfile==1.0.3",
+  "pyglet<2",
+  "json-tricks==3.17.3",
+  "fast_simplification==0.1.9",
+  "lmdb==1.6.2",
+  "submitit==1.5.2",
+  "sentencepiece==0.2.0",
+  "protobuf==5.29.3",
+  "diffusers[torch]==0.32.2",
+  "peft",
+  "dill==0.3.9",
+  "importlib-resources",
+  "tueplots",
+  "yapf",
+  "python-dotenv",
+  "transformers>=4.44.2",
+  "supervision==0.23.0",
+  "pydantic==2.9.2",
+  "gradio==5.0.2",
+  "litserve==0.2.3",
+  "pillow-heif",
+  "timm==1.0.12",
+  "einops==0.8.0",
+  "pytorch-lightning==2.0.2",
+  "pyrootutils==1.0.4",
+  "rich",
+  "munkres",
+  "xtcocotools>=1.8",
+  "openmim",
+  "depth-pro",
+  "lang-sam",
+  "mmpose",
+  "xformers==0.0.27",
+  "embreex",
+  "chumpy @ git+https://github.com/mattloper/chumpy",
+  "PerspectiveFields @ git+https://github.com/jinlinyi/PerspectiveFields.git",
+  "moge @ git+https://github.com/microsoft/MoGe.git@0286b495230a074aadf1c76cc5c679e943e5d1c6",
+  "detectron2 @ git+https://github.com/facebookresearch/detectron2.git",
+  "pytorch3d @ git+https://github.com/facebookresearch/pytorch3d.git",
+  "robust-loss-pytorch @ git+https://github.com/jonbarron/robust_loss_pytorch",
+  "wilor-mini @ git+https://github.com/warmshao/WiLoR-mini@a20fc482e68d17c0c8fa19c64f3f4544b6a310cf",
+  "smplfitter @ git+https://github.com/isarandi/smplfitter.git@13180c45a9201c8113690ad5158fad20b94be36b",
+  "sam-2 @ git+https://github.com/facebookresearch/segment-anything-2@c2ec8e14a185632b0a5d8b161928ceb50197eddc",
+]
+
+[tool.setuptools]
+py-modules = ["human", "image_helpers", "optimizer", "run_optimizer", "scene"]
+
+[tool.setuptools.packages.find]
+include = ["models*", "utils*"]
+
+[[tool.uv.index]]
+name = "pytorch-cu121"
+url = "https://download.pytorch.org/whl/cu121"
+explicit = true
+
+[tool.uv.sources]
+torch = { index = "pytorch-cu121" }
+torchvision = { index = "pytorch-cu121" }
+torchaudio = { index = "pytorch-cu121" }
+depth-pro = { path = "external/ml-depth-pro", editable = true }
+lang-sam = { path = "external/lang-segment-anything", editable = true }
+mmpose = { path = "external/ViTPose", editable = true }
+
+[tool.uv.extra-build-dependencies]
+chumpy = ["pip", "setuptools", "wheel", "numpy==1.26.4"]
+detectron2 = ["torch==2.3.1", "torchvision==0.18.1", "numpy==1.26.4"]
+pytorch3d = ["torch==2.3.1", "ninja==1.11.1.3"]
