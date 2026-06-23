@@ -72,7 +72,7 @@ dependencies = [
   "xformers==0.0.27",
   "embreex",
   "chumpy @ git+https://github.com/mattloper/chumpy",
-  "PerspectiveFields @ git+https://github.com/jinlinyi/PerspectiveFields.git",
+  "perspective2d @ git+https://github.com/jinlinyi/PerspectiveFields.git",
   "moge @ git+https://github.com/microsoft/MoGe.git@0286b495230a074aadf1c76cc5c679e943e5d1c6",
   "detectron2 @ git+https://github.com/facebookresearch/detectron2.git",
   "pytorch3d @ git+https://github.com/facebookresearch/pytorch3d.git",
