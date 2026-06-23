@@ -19,7 +19,8 @@ ENV DEBIAN_FRONTEND=noninteractive \
     CMAKE_BUILD_PARALLEL_LEVEL=1 \
     MAKEFLAGS=-j1 \
     NINJAFLAGS=-j1 \
-    TORCH_CUDA_ARCH_LIST="9.0+PTX"
+    TORCH_CUDA_ARCH_LIST="9.0+PTX" \
+    PIP_NO_BUILD_ISOLATION=1
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
     ca-certificates \
@@ -57,7 +58,8 @@ RUN --mount=type=cache,target=/root/.cache/uv uv sync --frozen --no-dev
 RUN --mount=type=cache,target=/root/.cache/uv uv pip install --python /opt/physic/.venv/bin/python --no-deps \
     "sam-2 @ git+https://github.com/facebookresearch/segment-anything-2@c2ec8e14a185632b0a5d8b161928ceb50197eddc"
 RUN --mount=type=cache,target=/root/.cache/uv uv pip install --python /opt/physic/.venv/bin/python "setuptools==69.5.1"
-RUN uv run mim install "mmcv==1.3.9" --no-deps && uv run mim install "mmdet<3"
+RUN uv run python -m pip install --no-build-isolation --no-deps "mmcv==1.3.9" \
+    && uv run mim install "mmdet<3"
 
 ENV PATH="/opt/physic/.venv/bin:${PATH}" \
     PYTHONPATH="/workspace/Phy-SIC:/workspace/Phy-SIC/external/CameraHMR:/workspace/Phy-SIC/external/lang-segment-anything:/workspace/Phy-SIC/external/ml-depth-pro/src:/workspace/Phy-SIC/external/ViTPose"
