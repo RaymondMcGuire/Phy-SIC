@@ -1,3 +1,5 @@
+# syntax=docker/dockerfile:1.7
+
 FROM nvidia/cuda:12.1.1-devel-ubuntu22.04
 
 ENV DEBIAN_FRONTEND=noninteractive \
@@ -9,7 +11,15 @@ ENV DEBIAN_FRONTEND=noninteractive \
     UV_PROJECT_ENVIRONMENT=/opt/physic/.venv \
     UV_PYTHON=/usr/bin/python3.10 \
     UV_LINK_MODE=copy \
-    UV_NO_SYNC=1
+    UV_NO_SYNC=1 \
+    UV_CONCURRENT_BUILDS=1 \
+    UV_CONCURRENT_DOWNLOADS=2 \
+    UV_CONCURRENT_INSTALLS=2 \
+    MAX_JOBS=1 \
+    CMAKE_BUILD_PARALLEL_LEVEL=1 \
+    MAKEFLAGS=-j1 \
+    NINJAFLAGS=-j1 \
+    TORCH_CUDA_ARCH_LIST="9.0+PTX"
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
     ca-certificates \
@@ -42,9 +52,9 @@ WORKDIR /workspace/Phy-SIC
 
 COPY . .
 
-RUN uv lock
-RUN uv sync --frozen --no-dev
-RUN uv pip install --python /opt/physic/.venv/bin/python --no-deps \
+RUN --mount=type=cache,target=/root/.cache/uv uv lock
+RUN --mount=type=cache,target=/root/.cache/uv uv sync --frozen --no-dev
+RUN --mount=type=cache,target=/root/.cache/uv uv pip install --python /opt/physic/.venv/bin/python --no-deps \
     "sam-2 @ git+https://github.com/facebookresearch/segment-anything-2@c2ec8e14a185632b0a5d8b161928ceb50197eddc"
 RUN uv run mim install "mmcv==1.3.9" --no-deps && uv run mim install "mmdet<3"
 
