@@ -40,7 +40,7 @@ dependencies = [
   "plyfile==1.0.3",
   "pyglet<2",
   "json-tricks==3.17.3",
-  "fast_simplification==0.1.9",
+  "fast-simplification==0.1.7",
   "lmdb==1.6.2",
   "submitit==1.5.2",
   "sentencepiece==0.2.0",
