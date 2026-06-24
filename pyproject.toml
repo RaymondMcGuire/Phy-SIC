@@ -13,6 +13,7 @@ dependencies = [
   "embreex",
   "hydra-colorlog==1.2.0",
   "imageio",
+  "importlib-resources>=5.12",
   "joblib==1.4.2",
   "json-tricks",
   "loguru==0.7.3",
