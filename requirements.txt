@@ -1,5 +1,4 @@
 git+https://github.com/jinlinyi/PerspectiveFields.git
-#https://github.com/AndreeaDogaru/mmcv/releases/download/v2.1.0/mmcv-2.1.0-cp310-cp310-linux_x86_64.whl
 HTML4Vision==0.4.3
 plyfile==1.0.3
 numpy

@@ -4,7 +4,7 @@
 This project requires a GPU with atleast 40GB of VRAM since we use OmniEraser based on FLUX.
 
 #### CUDA installation
-This project was tested on a CUDA 12.1 toolkit installation. Please download the CUDA 12.1 runfile from [NVIDIA's website](https://developer.nvidia.com/cuda-12-1-0-download-archive), and install the toolkit and set the environment variables as done in [Gen3DSR](https://github.com/AndreeaDogaru/Gen3DSR/blob/main/INSTALL.md).
+This project was tested on a CUDA 12.1 toolkit installation. Please download the CUDA 12.1 runfile from [NVIDIA's website](https://developer.nvidia.com/cuda-12-1-0-download-archive), install the toolkit, and make sure the CUDA binaries and libraries are available in your environment.
 
 #### Conda environment setup
 To install PhySIC and its dependencies, please create a conda environment with Python 3.10, and run the install script:

@@ -1,4 +1,3 @@
-import sys
 import os
 import torch
 
@@ -12,8 +11,6 @@ from .utils import (
     focal_length_to_intrinsics,
     align_points_pt,
 )
-
-sys.path.append(os.path.join(os.getcwd(), "external/Metric3D"))
 
 from moge.model.v1 import MoGeModel
 
