@@ -27,6 +27,9 @@ ENV FORCE_CUDA=1 \
     UV_LINK_MODE=copy \
     UV_PROJECT_ENVIRONMENT=/opt/physic/.venv \
     CAMERAHMR_DATA_DIR=/workspace/Phy-SIC/data \
+    MMPOSE_CONFIG=/workspace/Phy-SIC/data/mmpose/configs/wholebody_2d_keypoint/rtmpose/coco-wholebody/rtmpose-l_8xb64-270e_coco-wholebody-256x192.py \
+    MMPOSE_CHECKPOINT=/workspace/Phy-SIC/data/mmpose/rtmpose-l_simcc-coco-wholebody_pt-aic-coco_270e-256x192-6f206314_20230124.pth \
+    MMCV_WITH_OPS=1 \
     PIP_DISABLE_PIP_VERSION_CHECK=1 \
     PIP_NO_CACHE_DIR=1 \
     PATH="/opt/physic/.venv/bin:${PATH}"
@@ -71,8 +74,7 @@ RUN --mount=type=cache,target=/root/.cache/uv \
 
 RUN --mount=type=cache,target=/root/.cache/uv \
     uv pip install --python /opt/physic/.venv/bin/python --no-deps \
-    -e external/ml-depth-pro \
-    -e external/ViTPose
+    -e external/ml-depth-pro
 
 RUN --mount=type=cache,target=/root/.cache/uv \
     uv pip install --python /opt/physic/.venv/bin/python \
@@ -88,7 +90,9 @@ RUN --mount=type=cache,target=/root/.cache/uv \
     "git+https://github.com/facebookresearch/pytorch3d.git"
 
 RUN --mount=type=cache,target=/root/.cache/uv \
-    uv run --no-sync mim install "mmcv==1.3.9" --no-deps && \
-    uv run --no-sync mim install "mmdet==2.14.0" --no-deps
+    uv run --no-sync mim install "mmengine>=0.7.1,<1.0.0" && \
+    uv run --no-sync mim install "mmcv>=2.0.0,<2.2.0" --no-build-isolation && \
+    uv run --no-sync mim install "mmdet>=3.0.0,<3.3.0" && \
+    uv run --no-sync mim install "mmpose==1.3.2" --no-deps
 
 CMD ["uv", "run", "--no-sync", "python", "run_optimizer.py"]

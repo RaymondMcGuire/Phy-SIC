@@ -12,7 +12,14 @@ docker compose build physic
 docker compose run --rm physic
 ```
 
-By default, compose mounts `data/`, `images/`, and `outputs/` from the host into the container.
+By default, compose mounts `data/`, `images/`, and `outputs/` from the host into the container. If you download model data on Windows into another folder, point Compose at it before running:
+
+```powershell
+$env:PHYSIC_DATA_DIR="D:\SMPL-project\Phy-SIC\data"
+docker compose run --rm physic
+```
+
+Inside WSL, use the mounted Linux path form instead, for example `/mnt/d/SMPL-project/Phy-SIC/data`.
 
 If the build stalls or the machine runs out of memory, lower the build/download concurrency before building:
 

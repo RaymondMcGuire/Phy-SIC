@@ -55,8 +55,12 @@ wget --post-data "username=$username&password=$password" 'https://download.is.tu
 wget --post-data "username=$username&password=$password" 'https://download.is.tue.mpg.de/download.php?domain=camerahmr&sfile=model_final_f05665.pkl' -O './data/pretrained-models/model_final_f05665.pkl' --no-check-certificate --continue
 wget --post-data "username=$username&password=$password" 'https://download.is.tue.mpg.de/download.php?domain=camerahmr&sfile=smpl_mean_params.npz' -O './data/smpl_mean_params.npz' --no-check-certificate --continue
 
-#ViTPose and Depth Pro
-wget https://huggingface.co/JunkyByte/easy_ViTPose/resolve/main/torch/wholebody/vitpose-h-wholebody.pth -O data/vitpose_huge_wholebody.pth
+# MMPose RTMPose whole-body and Depth Pro
+mkdir -p data/mmpose/configs/wholebody_2d_keypoint/rtmpose/coco-wholebody
+mkdir -p data/mmpose/configs/_base_
+wget https://raw.githubusercontent.com/open-mmlab/mmpose/v1.3.2/configs/wholebody_2d_keypoint/rtmpose/coco-wholebody/rtmpose-l_8xb64-270e_coco-wholebody-256x192.py -O data/mmpose/configs/wholebody_2d_keypoint/rtmpose/coco-wholebody/rtmpose-l_8xb64-270e_coco-wholebody-256x192.py
+wget https://raw.githubusercontent.com/open-mmlab/mmpose/v1.3.2/configs/_base_/default_runtime.py -O data/mmpose/configs/_base_/default_runtime.py
+wget https://download.openmmlab.com/mmpose/v1/projects/rtmposev1/rtmpose-l_simcc-coco-wholebody_pt-aic-coco_270e-256x192-6f206314_20230124.pth -O data/mmpose/rtmpose-l_simcc-coco-wholebody_pt-aic-coco_270e-256x192-6f206314_20230124.pth
 wget https://ml-site.cdn-apple.com/models/depth-pro/depth_pro.pt -P data/
 
 # Deco checkpoints and data

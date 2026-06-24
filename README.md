@@ -38,6 +38,7 @@ fetch_data.bat
 ```
 
 This requires access to [SMPL](https://smpl.is.tue.mpg.de/), [SMPL-X](https://smpl-x.is.tue.mpg.de/), [AGORA](https://agora.is.tue.mpg.de/), and [CameraHMR](https://camerahmr.is.tue.mpg.de/). Please enter the credentials when prompted.
+The MMPose RTMPose whole-body config/checkpoint is downloaded into `data/mmpose/`; Docker Compose mounts `data/` into the container by default. To use a different host model folder, set `PHYSIC_DATA_DIR` before running Compose.
 
 ### Running the Code
 To run the code, please copy images to the `images/` directory. Then, execute the following command:
@@ -61,7 +62,7 @@ This code is built on top of many great open-source projects. We would like to t
 - [WiLoR](https://github.com/rolpotamias/WiLoR)/[WiLoR-mini](https://github.com/warmshao/WiLoR-mini) for initial hand pose estimation.
 - [DECO](https://github.com/sha2nkt/deco) for contact estimation.
 - [DepthPro](https://github.com/apple/ml-depth-pro) for metric depth estimation.
-- [HSfM](https://github.com/hongsukchoi/HSfM_RELEASE) and [ViTPose](https://github.com/ViTAE-Transformer/ViTPose) for the ViTPose inference code and models.
+- [HSfM](https://github.com/hongsukchoi/HSfM_RELEASE) and [MMPose/RTMPose](https://github.com/open-mmlab/mmpose) for the whole-body 2D pose estimation pipeline.
 - [LangSAM](https://github.com/luca-medeiros/lang-segment-anything), [GroundingDINO](https://github.com/IDEA-Research/GroundingDINO), and [Segment-Anything](https://github.com/facebookresearch/segment-anything) for the segmentation code and models.
 - [SMPLFitter](https://github.com/isarandi/smplfitter)/[NLF](https://github.com/isarandi/nlf) for the SMPL-to-SMPL-X converter.
 

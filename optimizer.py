@@ -43,7 +43,7 @@ from utils.geometry import (
 )
 from utils.utils import pack_points_into_batch
 
-from models.hsfm.vitpose_inference import get_human_pose_2d_vitpose, load_vitpose
+from models.hsfm.mmpose_inference import get_human_pose_2d_mmpose, load_mmpose
 
 from human import (
     process_human,
@@ -157,7 +157,7 @@ class HumanScene(nn.Module):
         # Initialize the human mesh, contact vertices, and 2D pose.
         ###########################################################
         self.n_humans = self.boxes.shape[0]
-        keypoints_2d, scores_2d = get_human_pose_2d_vitpose(
+        keypoints_2d, scores_2d = get_human_pose_2d_mmpose(
             self.image_np, self.boxes
         )
         conf_2d = torch.tensor(scores_2d).float()

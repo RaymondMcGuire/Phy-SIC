@@ -50,7 +50,7 @@ from optimizer import (
     load_wilor,
     load_moge,
     load_dpro,
-    load_vitpose,
+    load_mmpose,
 )
 
 t0 = time.time()
@@ -58,8 +58,8 @@ load_gsam()
 print("Time taken to load gsam: {:.4f} seconds".format(time.time() - t0))
 
 t0 = time.time()
-load_vitpose()
-print("Time taken to load vitpose: {:.4f} seconds".format(time.time() - t0))
+load_mmpose()
+print("Time taken to load mmpose: {:.4f} seconds".format(time.time() - t0))
 
 t0 = time.time()
 load_omni()

@@ -640,13 +640,13 @@ def get_hand_pose(
         }
         person_id = human_idx[hand_idx]
 
-        is_right_from_vitpose = is_rights[hand_idx]
+        is_right_from_pose = is_rights[hand_idx]
         is_right_from_wilor = out["is_right"]
-        if is_right_from_vitpose != is_right_from_wilor:
-            print(f"Mismatch between vitpose and wilor for person {person_id}")
+        if is_right_from_pose != is_right_from_wilor:
+            print(f"Mismatch between pose detector and wilor for person {person_id}")
             continue
 
-        if is_right_from_vitpose:
+        if is_right_from_pose:
             results[person_id]["right_hand"] = saving_output
         else:
             results[person_id]["left_hand"] = saving_output

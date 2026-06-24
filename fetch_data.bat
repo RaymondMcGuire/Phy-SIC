@@ -73,7 +73,11 @@ call :download_post "https://download.is.tue.mpg.de/download.php?domain=camerahm
 call :download_post "https://download.is.tue.mpg.de/download.php?domain=camerahmr&sfile=smpl_mean_params.npz" "data\smpl_mean_params.npz" || goto :error
 
 mkdir "data" 2>nul
-call :download_get "https://huggingface.co/JunkyByte/easy_ViTPose/resolve/main/torch/wholebody/vitpose-h-wholebody.pth" "data\vitpose_huge_wholebody.pth" || goto :error
+mkdir "data\mmpose\configs\wholebody_2d_keypoint\rtmpose\coco-wholebody" 2>nul
+mkdir "data\mmpose\configs\_base_" 2>nul
+call :download_get "https://raw.githubusercontent.com/open-mmlab/mmpose/v1.3.2/configs/wholebody_2d_keypoint/rtmpose/coco-wholebody/rtmpose-l_8xb64-270e_coco-wholebody-256x192.py" "data\mmpose\configs\wholebody_2d_keypoint\rtmpose\coco-wholebody\rtmpose-l_8xb64-270e_coco-wholebody-256x192.py" || goto :error
+call :download_get "https://raw.githubusercontent.com/open-mmlab/mmpose/v1.3.2/configs/_base_/default_runtime.py" "data\mmpose\configs\_base_\default_runtime.py" || goto :error
+call :download_get "https://download.openmmlab.com/mmpose/v1/projects/rtmposev1/rtmpose-l_simcc-coco-wholebody_pt-aic-coco_270e-256x192-6f206314_20230124.pth" "data\mmpose\rtmpose-l_simcc-coco-wholebody_pt-aic-coco_270e-256x192-6f206314_20230124.pth" || goto :error
 call :download_get "https://ml-site.cdn-apple.com/models/depth-pro/depth_pro.pt" "data\depth_pro.pt" || goto :error
 
 mkdir "data\deco" 2>nul
