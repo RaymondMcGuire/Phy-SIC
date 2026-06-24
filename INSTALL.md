@@ -13,8 +13,7 @@ docker compose build physic
 docker compose run --rm physic
 ```
 
-To pre-download runtime Hugging Face models into the mounted data cache on Windows, set
-`HF_TOKEN` in `.env` for gated FLUX access and run:
+To pre-download runtime Hugging Face models into the mounted data cache on Windows, accept/request access for `black-forest-labs/FLUX.1-dev` and `theSure/Omnieraser`, set `HF_TOKEN` in `.env`, and run:
 
 ```bat
 fetch_hf_data.bat

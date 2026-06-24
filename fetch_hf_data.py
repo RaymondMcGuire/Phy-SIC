@@ -10,7 +10,7 @@ from pathlib import Path
 
 HF_REPOS = [
     ("black-forest-labs/FLUX.1-dev", True),
-    ("theSure/Omnieraser", False),
+    ("theSure/Omnieraser", True),
     ("Ruicheng/moge-vitl", False),
     ("IDEA-Research/grounding-dino-base", False),
 ]
@@ -40,7 +40,7 @@ def main() -> int:
     parser.add_argument(
         "--skip-gated",
         action="store_true",
-        help="Skip gated repositories such as black-forest-labs/FLUX.1-dev.",
+        help="Skip gated repositories such as FLUX.1-dev and Omnieraser.",
     )
     args = parser.parse_args()
 
@@ -56,8 +56,10 @@ def main() -> int:
     os.environ["HF_HUB_OFFLINE"] = "0"
     os.environ["TRANSFORMERS_OFFLINE"] = "0"
     os.environ["DIFFUSERS_OFFLINE"] = "0"
+    os.environ.setdefault("HF_HUB_DISABLE_SYMLINKS_WARNING", "1")
 
     from huggingface_hub import snapshot_download
+    from huggingface_hub.errors import GatedRepoError, HfHubHTTPError
 
     print(f"[hf] data dir: {data_dir}")
     print(f"[hf] hub cache: {hub_cache}")
@@ -83,11 +85,23 @@ def main() -> int:
             continue
 
         print(f"[download] {repo_id}")
-        path = snapshot_download(
-            repo_id=repo_id,
-            cache_dir=str(hub_cache),
-            token=args.token if gated or args.token else None,
-        )
+        try:
+            path = snapshot_download(
+                repo_id=repo_id,
+                cache_dir=str(hub_cache),
+                token=args.token if gated or args.token else None,
+                max_workers=1,
+            )
+        except GatedRepoError:
+            print(
+                f"[error] Cannot access gated Hugging Face repo: {repo_id}\n"
+                f"        Visit https://huggingface.co/{repo_id} while logged in, "
+                "request/accept access, then rerun fetch_hf_data.bat with the same token."
+            )
+            return 1
+        except HfHubHTTPError as exc:
+            print(f"[error] Hugging Face download failed for {repo_id}: {exc}")
+            return 1
         print(f"[ok] {repo_id} -> {path}")
 
     print("[hf] Done.")

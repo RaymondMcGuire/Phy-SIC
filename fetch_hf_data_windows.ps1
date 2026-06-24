@@ -20,9 +20,10 @@ if ($Help) {
   Write-Host "  fetch_hf_data.bat -DataDir data -SkipGated"
   Write-Host "  fetch_hf_data.bat -DataDir D:\SMPL-project\Phy-SIC\data"
   Write-Host ""
-  Write-Host "Before downloading FLUX.1-dev:"
+  Write-Host "Before downloading gated models:"
   Write-Host "  1. Accept access on https://huggingface.co/black-forest-labs/FLUX.1-dev"
-  Write-Host "  2. Put HF_TOKEN=hf_xxx in .env, pass -Token hf_xxx, or paste it when prompted"
+  Write-Host "  2. Accept/request access on https://huggingface.co/theSure/Omnieraser"
+  Write-Host "  3. Put HF_TOKEN=hf_xxx in .env, pass -Token hf_xxx, or paste it when prompted"
   Write-Host ""
   Write-Host "This script creates .hf-download-venv with only huggingface_hub tools."
   exit 0
@@ -106,7 +107,7 @@ if (-not $Token) {
 if (-not $Token -and -not $SkipGated) {
   Write-Host ""
   Write-Host "[hf] HF_TOKEN was not found in .env or environment variables."
-  Write-Host "[hf] Paste a Hugging Face read token for FLUX.1-dev. Input is hidden."
+  Write-Host "[hf] Paste a Hugging Face read token for FLUX.1-dev and Omnieraser. Input is hidden."
   $secure = Read-Host -Prompt "HF token" -AsSecureString
   $bstr = [Runtime.InteropServices.Marshal]::SecureStringToBSTR($secure)
   try {
@@ -116,7 +117,7 @@ if (-not $Token -and -not $SkipGated) {
     [Runtime.InteropServices.Marshal]::ZeroFreeBSTR($bstr)
   }
   if ([string]::IsNullOrWhiteSpace($Token)) {
-    throw "HF token is required to download black-forest-labs/FLUX.1-dev."
+    throw "HF token is required to download gated Hugging Face repos."
   }
 }
 

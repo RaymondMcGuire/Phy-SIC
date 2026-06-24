@@ -17,7 +17,8 @@ echo Phy-SIC Hugging Face runtime model downloader
 echo.
 echo This downloads model caches on Windows into the local data\huggingface folder.
 echo Docker can then read them through the PHYSIC_DATA_DIR volume mapping.
-echo FLUX.1-dev will be downloaded too; it requires HF_TOKEN in .env.
+echo Gated models FLUX.1-dev and Omnieraser will be downloaded too.
+echo They require HF_TOKEN in .env and accepted Hugging Face access.
 echo.
 echo Press Enter to use the default repository data directory:
 echo   %CD%\data

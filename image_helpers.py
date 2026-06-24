@@ -2,6 +2,7 @@ import os
 import cv2
 import torch
 import numpy as np
+from pathlib import Path
 
 from lang_sam import LangSAM
 from concurrent.futures import ThreadPoolExecutor
@@ -18,7 +19,46 @@ from models.omnieraser.pipeline_flux_control_removal import FluxControlRemovalPi
 #################################################################
 
 os.environ["TOKENIZERS_PARALLELISM"] = "false"
+PROJECT_ROOT = Path(__file__).resolve().parent
 enable_offload = not bool(os.getenv("DISABLE_OFFLOAD"))
+
+
+def _hf_cache_dir() -> Path:
+    cache_dir = os.getenv("HF_HUB_CACHE") or os.getenv("HUGGINGFACE_HUB_CACHE")
+    if cache_dir:
+        return Path(cache_dir)
+    return PROJECT_ROOT / "data" / "huggingface" / "hub"
+
+
+def _cached_snapshot_fallback(repo_id: str) -> str | None:
+    snapshots_dir = _hf_cache_dir() / f"models--{repo_id.replace('/', '--')}" / "snapshots"
+    if not snapshots_dir.exists():
+        return None
+    snapshots = [path for path in snapshots_dir.iterdir() if path.is_dir()]
+    if not snapshots:
+        return None
+    snapshots.sort(key=lambda path: path.stat().st_mtime, reverse=True)
+    return str(snapshots[0])
+
+
+def _resolve_local_hf_snapshot(repo_id: str) -> str:
+    from huggingface_hub import snapshot_download
+
+    try:
+        return snapshot_download(
+            repo_id=repo_id,
+            cache_dir=str(_hf_cache_dir()),
+            local_files_only=True,
+        )
+    except Exception as exc:
+        fallback = _cached_snapshot_fallback(repo_id)
+        if fallback:
+            return fallback
+        raise FileNotFoundError(
+            f"Hugging Face model cache not found for {repo_id}. "
+            "Run fetch_hf_data.bat on Windows first, then make sure "
+            "PHYSIC_DATA_DIR maps that data folder into Docker."
+        ) from exc
 
 def load_gsam():
     global model
@@ -49,9 +89,12 @@ def load_omni():
     if "pipe" in globals() and pipe is not None:
         pass
     else:
+        flux_path = _resolve_local_hf_snapshot("black-forest-labs/FLUX.1-dev")
+        omnieraser_path = _resolve_local_hf_snapshot("theSure/Omnieraser")
+
         # Build pipeline
         transformer = FluxTransformer2DModel.from_pretrained(
-            "black-forest-labs/FLUX.1-dev",
+            flux_path,
             subfolder="transformer",
             torch_dtype=torch.bfloat16,
             local_files_only=True,
@@ -76,7 +119,7 @@ def load_omni():
             transformer.register_to_config(in_channels=initial_input_channels * 4)
 
         pipe = FluxControlRemovalPipeline.from_pretrained(
-            "black-forest-labs/FLUX.1-dev",
+            flux_path,
             transformer=transformer,
             torch_dtype=torch.bfloat16,
             local_files_only=True,
@@ -87,7 +130,7 @@ def load_omni():
         )
 
         pipe.load_lora_weights(
-            "theSure/Omnieraser",
+            omnieraser_path,
             weight_name="pytorch_lora_weights.safetensors",
             local_files_only=True,
         )

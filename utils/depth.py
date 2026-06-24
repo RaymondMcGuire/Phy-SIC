@@ -26,14 +26,55 @@ if not DEPTH_PRO_CHECKPOINT.is_absolute():
 
 enable_offload = not bool(os.getenv("DISABLE_OFFLOAD"))
 
-# Load the model from huggingface hub (or load from local).
+
+def _hf_cache_dir() -> Path:
+    cache_dir = os.getenv("HF_HUB_CACHE") or os.getenv("HUGGINGFACE_HUB_CACHE")
+    if cache_dir:
+        return Path(cache_dir)
+    return PROJECT_ROOT / "data" / "huggingface" / "hub"
+
+
+def _cached_snapshot_fallback(repo_id: str) -> str | None:
+    snapshots_dir = _hf_cache_dir() / f"models--{repo_id.replace('/', '--')}" / "snapshots"
+    if not snapshots_dir.exists():
+        return None
+    snapshots = [path for path in snapshots_dir.iterdir() if path.is_dir()]
+    if not snapshots:
+        return None
+    snapshots.sort(key=lambda path: path.stat().st_mtime, reverse=True)
+    return str(snapshots[0])
+
+
+def _resolve_local_hf_snapshot(repo_id: str) -> str:
+    from huggingface_hub import snapshot_download
+
+    try:
+        return snapshot_download(
+            repo_id=repo_id,
+            cache_dir=str(_hf_cache_dir()),
+            local_files_only=True,
+        )
+    except Exception as exc:
+        fallback = _cached_snapshot_fallback(repo_id)
+        if fallback:
+            return fallback
+        raise FileNotFoundError(
+            f"Hugging Face model cache not found for {repo_id}. "
+            "Run fetch_hf_data.bat on Windows first, then make sure "
+            "PHYSIC_DATA_DIR maps that data folder into Docker."
+        ) from exc
+
+
+# Load the model from the pre-downloaded Hugging Face cache.
 def load_moge(device="cuda"):
     global moge_model
     if "moge_model" in globals() and moge_model is not None:
         pass
     else:
         # moge_model = MoGeModel.from_pretrained("Ruicheng/moge-2-vitl")
-        moge_model = MoGeModel.from_pretrained("Ruicheng/moge-vitl")
+        moge_model = MoGeModel.from_pretrained(
+            _resolve_local_hf_snapshot("Ruicheng/moge-vitl")
+        )
         moge_model.eval()
         if enable_offload:
             moge_model.to("cpu")

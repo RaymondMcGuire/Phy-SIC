@@ -46,7 +46,7 @@ Runtime models from Hugging Face can also be pre-downloaded into the mounted `da
 fetch_hf_data.bat
 ```
 
-This creates a lightweight `.hf-download-venv` for `huggingface_hub` only, downloads into the local `data/` folder, and lets Docker read the same files through `PHYSIC_DATA_DIR`. `black-forest-labs/FLUX.1-dev` is gated, so `fetch_hf_data.bat` downloads it by default and needs `HF_TOKEN` in `.env` after accepting the model license on Hugging Face. Docker runtime is forced offline for Hugging Face and does not receive the token.
+This creates a lightweight `.hf-download-venv` for `huggingface_hub` only, downloads into the local `data/` folder, and lets Docker read the same files through `PHYSIC_DATA_DIR`. `black-forest-labs/FLUX.1-dev` and `theSure/Omnieraser` are gated/restricted on Hugging Face, so `fetch_hf_data.bat` downloads them by default and needs `HF_TOKEN` in `.env` after accepting/requesting access on both model pages. Docker runtime is forced offline for Hugging Face and does not receive the token.
 
 ### Running the Code
 To run the code, please copy images to the `images/` directory. Then, execute the following command:
