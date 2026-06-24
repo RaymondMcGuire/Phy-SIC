@@ -1,6 +1,8 @@
 import os
+import inspect
 from pathlib import Path
 from typing import List
+from contextlib import contextmanager
 
 import numpy as np
 import torch
@@ -52,6 +54,30 @@ def _get_model_paths() -> tuple[Path, Path]:
     return config_path, checkpoint_path
 
 
+def _torch_load_accepts_weights_only() -> bool:
+    return "weights_only" in inspect.signature(torch.load).parameters
+
+
+@contextmanager
+def _trusted_torch_load_for_official_checkpoint():
+    """Allow legacy OpenMMLab checkpoints on PyTorch 2.6+ during model init."""
+    if not _torch_load_accepts_weights_only():
+        yield
+        return
+
+    original_load = torch.load
+
+    def load_with_legacy_checkpoint_support(*args, **kwargs):
+        kwargs.setdefault("weights_only", False)
+        return original_load(*args, **kwargs)
+
+    torch.load = load_with_legacy_checkpoint_support
+    try:
+        yield
+    finally:
+        torch.load = original_load
+
+
 def load_mmpose(device: str = "cuda"):
     """Load the MMPose RTMPose whole-body model used for 2D keypoints."""
     global model
@@ -72,7 +98,8 @@ def load_mmpose(device: str = "cuda"):
     from mmpose.utils import register_all_modules
 
     register_all_modules()
-    model = init_model(str(config_path), str(checkpoint_path), device=device)
+    with _trusted_torch_load_for_official_checkpoint():
+        model = init_model(str(config_path), str(checkpoint_path), device=device)
     model.eval()
 
     if enable_offload:

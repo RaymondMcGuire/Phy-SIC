@@ -32,6 +32,18 @@ rm -r ./data/body_models/smplx/models ./data/body_models/smplx/models_smplx_v1_1
 mkdir -p data/models/SMPLX
 ln -sf ../../body_models/smplx/SMPLX_NEUTRAL.npz ./data/models/SMPLX/SMPLX_NEUTRAL.npz
 
+# SMPLFitter SMPL <-> SMPL-X transfer files
+if [[ ! -f ./data/body_models/smpl2smplx_deftrafo_setup.pkl || ! -f ./data/body_models/smplx2smpl_deftrafo_setup.pkl ]]; then
+    wget --post-data "username=$username&password=$password" 'https://download.is.tue.mpg.de/download.php?domain=smplx&sfile=model_transfer.zip' -O './data/body_models/model_transfer.zip' --no-check-certificate --continue
+    rm -rf ./data/body_models/model_transfer_tmp
+    mkdir -p ./data/body_models/model_transfer_tmp
+    unzip -o ./data/body_models/model_transfer.zip -d ./data/body_models/model_transfer_tmp/
+    find ./data/body_models/model_transfer_tmp -name '*deftrafo_setup.pkl' -exec cp {} ./data/body_models/ \;
+    test -f ./data/body_models/smpl2smplx_deftrafo_setup.pkl
+    test -f ./data/body_models/smplx2smpl_deftrafo_setup.pkl
+    rm -r ./data/body_models/model_transfer_tmp ./data/body_models/model_transfer.zip
+fi
+
 echo -e "Please register at https://agora.is.tue.mpg.de"
 read -p "Username (CameraHMR account): " username
 read -p "Password (CameraHMR account): " password

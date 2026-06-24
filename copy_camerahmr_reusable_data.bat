@@ -30,6 +30,7 @@ call :copy_required "%SOURCE_DATA_DIR%\pretrained-models\camerahmr_checkpoint_cl
 call :copy_required "%SOURCE_DATA_DIR%\pretrained-models\model_final_f05665.pkl" "data\pretrained-models\model_final_f05665.pkl" || goto :error
 
 call :copy_required "%SOURCE_DATA_DIR%\models\SMPL\SMPL_NEUTRAL.pkl" "data\body_models\smpl\SMPL_NEUTRAL.pkl" || goto :error
+call :copy_required "%SOURCE_DATA_DIR%\models\SMPL\SMPL_NEUTRAL.pkl" "data\body_models\smpl\basicmodel_neutral_lbs_10_207_0_v1.1.0.pkl" || goto :error
 call :copy_required "%SOURCE_DATA_DIR%\models\SMPL\SMPL_NEUTRAL.pkl" "data\models\SMPL\SMPL_NEUTRAL.pkl" || goto :error
 
 echo.
@@ -62,6 +63,7 @@ echo   data\pretrained-models\cam_model_cleaned.ckpt
 echo   data\pretrained-models\camerahmr_checkpoint_cleaned.ckpt
 echo   data\pretrained-models\model_final_f05665.pkl
 echo   data\body_models\smpl\SMPL_NEUTRAL.pkl
+echo   data\body_models\smpl\basicmodel_neutral_lbs_10_207_0_v1.1.0.pkl
 echo   data\models\SMPL\SMPL_NEUTRAL.pkl
 echo.
 echo Not copied:
