@@ -41,6 +41,8 @@ if not exist "data\body_models\smpl\basicmodel_neutral_lbs_10_207_0_v1.1.0.pkl" 
     goto :error
 )
 copy /Y "data\body_models\smpl\basicmodel_neutral_lbs_10_207_0_v1.1.0.pkl" "data\body_models\smpl\SMPL_NEUTRAL.pkl" >nul || goto :error
+mkdir "data\models\SMPL" 2>nul
+copy /Y "data\body_models\smpl\SMPL_NEUTRAL.pkl" "data\models\SMPL\SMPL_NEUTRAL.pkl" >nul || goto :error
 
 call :prompt_credentials "SMPL-X" "https://smpl-x.is.tue.mpg.de" || goto :error
 
@@ -54,10 +56,8 @@ if not exist "data\body_models\smplx\models\smplx" (
 move /Y "data\body_models\smplx\models\smplx\*" "data\body_models\smplx\" >nul || goto :error
 rmdir /S /Q "data\body_models\smplx\models" 2>nul
 del /Q "data\body_models\smplx\models_smplx_v1_1.zip" 2>nul
-
-call :download_post "https://download.is.tue.mpg.de/download.php?domain=smplx&sfile=model_transfer.zip" "data\body_models\transfer.zip" || goto :error
-call :extract_zip_entry "data\body_models\transfer.zip" "smpl2smplx_deftrafo_setup.pkl" "data\body_models" || goto :error
-del /Q "data\body_models\transfer.zip" 2>nul
+mkdir "data\models\SMPLX" 2>nul
+copy /Y "data\body_models\smplx\SMPLX_NEUTRAL.npz" "data\models\SMPLX\SMPLX_NEUTRAL.npz" >nul || goto :error
 
 call :prompt_credentials "AGORA" "https://agora.is.tue.mpg.de" || goto :error
 
@@ -66,11 +66,11 @@ call :download_post "https://download.is.tue.mpg.de/download.php?domain=agora&re
 
 call :prompt_credentials "CameraHMR" "https://camerahmr.is.tue.mpg.de" || goto :error
 
-mkdir "data\chmr" 2>nul
-call :download_post "https://download.is.tue.mpg.de/download.php?domain=camerahmr&sfile=cam_model_cleaned.ckpt" "data\chmr\cam_model_cleaned.ckpt" || goto :error
-call :download_post "https://download.is.tue.mpg.de/download.php?domain=camerahmr&sfile=camerahmr_checkpoint_cleaned.ckpt" "data\chmr\camerahmr_checkpoint_cleaned.ckpt" || goto :error
-call :download_post "https://download.is.tue.mpg.de/download.php?domain=camerahmr&sfile=model_final_f05665.pkl" "data\chmr\model_final_f05665.pkl" || goto :error
-call :download_post "https://download.is.tue.mpg.de/download.php?domain=camerahmr&sfile=smpl_mean_params.npz" "data\chmr\smpl_mean_params.npz" || goto :error
+mkdir "data\pretrained-models" 2>nul
+call :download_post "https://download.is.tue.mpg.de/download.php?domain=camerahmr&sfile=cam_model_cleaned.ckpt" "data\pretrained-models\cam_model_cleaned.ckpt" || goto :error
+call :download_post "https://download.is.tue.mpg.de/download.php?domain=camerahmr&sfile=camerahmr_checkpoint_cleaned.ckpt" "data\pretrained-models\camerahmr_checkpoint_cleaned.ckpt" || goto :error
+call :download_post "https://download.is.tue.mpg.de/download.php?domain=camerahmr&sfile=model_final_f05665.pkl" "data\pretrained-models\model_final_f05665.pkl" || goto :error
+call :download_post "https://download.is.tue.mpg.de/download.php?domain=camerahmr&sfile=smpl_mean_params.npz" "data\smpl_mean_params.npz" || goto :error
 
 mkdir "data" 2>nul
 call :download_get "https://huggingface.co/JunkyByte/easy_ViTPose/resolve/main/torch/wholebody/vitpose-h-wholebody.pth" "data\vitpose_huge_wholebody.pth" || goto :error
@@ -130,11 +130,6 @@ exit /b %ERRORLEVEL%
 :expand_zip
 echo Extracting %~1
 powershell.exe -NoProfile -ExecutionPolicy Bypass -Command "Expand-Archive -Force -LiteralPath '%~1' -DestinationPath '%~2'"
-exit /b %ERRORLEVEL%
-
-:extract_zip_entry
-echo Extracting %~2 from %~1
-powershell.exe -NoProfile -ExecutionPolicy Bypass -Command "Add-Type -AssemblyName System.IO.Compression.FileSystem; $zip='%~1'; $entry='%~2'; $dest='%~3'; $archive=[IO.Compression.ZipFile]::OpenRead($zip); try { $match=$archive.Entries | Where-Object { $_.FullName -eq $entry } | Select-Object -First 1; if (-not $match) { throw ('Entry not found: ' + $entry) }; $target=Join-Path $dest $match.Name; [IO.Compression.ZipFileExtensions]::ExtractToFile($match, $target, $true) } finally { $archive.Dispose() }"
 exit /b %ERRORLEVEL%
 
 :help

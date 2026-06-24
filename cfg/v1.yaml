@@ -1,30 +1,13 @@
 # run settings
 run_name: wild_results
-start_stage: inpaint
-init_from: test1_moge_points_fov
-dataset: prox
-
-hydra:
-  run:
-    dir: outputs/quantitative_${run_name}
-
-db_path: data_lmdb
-file_list: "tmp/prox_images.txt"
-start_idx: 0
-end_idx: -1
-batch_size: 0  # will be set by the job manager
-quantitative: true
 
 # general
 single_human: false
 body_model: SMPLX
-debug: true
 
 max_img_size: 1024
 flip_image: false
-sample_multiple_inpaints: true
 inpaint_model: omni
-skip_existing: false
 
 # keypoints related
 keypoint_threshold: 0.5

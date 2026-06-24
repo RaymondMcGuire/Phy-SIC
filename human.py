@@ -5,17 +5,20 @@ import torch
 import cv2
 import smplx
 import pickle
-import json
 from PIL import Image
 from multiprocessing import Pool
 from typing import List
 
+PROJECT_ROOT = os.path.dirname(os.path.abspath(__file__))
+CAMERAHMR_ROOT = os.path.join(PROJECT_ROOT, "external", "CameraHMR")
+
 sys.path = [
-    ".",
-    "external/CameraHMR",
+    PROJECT_ROOT,
+    CAMERAHMR_ROOT,
 ] + sys.path
 
-os.environ["DATA_ROOT"] = "data"
+os.environ.setdefault("DATA_ROOT", "data")
+os.environ.setdefault("CAMERAHMR_DATA_DIR", os.path.join(PROJECT_ROOT, "data"))
 
 import numpy as np
 import open3d as o3d
@@ -129,9 +132,6 @@ enable_offload = not bool(os.getenv("DISABLE_OFFLOAD"))
 with open("data/conversions/smpl_to_smplx.pkl", "rb") as f:
     mapping = torch.tensor(pickle.load(f)["matrix"]).float()
 
-with open("data/conversions/smplx_to_smpl.pkl", "rb") as f:
-    inv_mapping = torch.tensor(pickle.load(f)["matrix"]).float()
-
 bm_in = BodyModel("smpl", "neutral")
 bm_out = BodyModel("smplx", "neutral")
 smpl2smplx = BodyConverter(bm_in, bm_out).cuda()
@@ -155,7 +155,6 @@ def load_chmr():
             estimator.cam_model.cpu()
         else:
             estimator.model.cuda()
-            estimator.cam_model.cuda()
     return estimator
 
 
@@ -783,7 +782,6 @@ def get_chmr_results(
     """ """
     if enable_offload:
         estimator.model.cuda()
-        estimator.cam_model.cuda()
 
     estimator.model.eval()
 
@@ -830,16 +828,18 @@ def get_chmr_results(
     )
 
     most_confident_idx = np.argmax(confs)
+    body_model = getattr(estimator, "smpl_model", getattr(estimator, "body_model", None))
+    if body_model is None:
+        raise AttributeError("CameraHMR estimator has no SMPL body model")
 
     mesh = trimesh.Trimesh(
         pred_vertices_array[most_confident_idx],
-        estimator.smpl_model.faces,
+        body_model.faces,
         process=False,
     )
 
     if enable_offload:
         estimator.model.cpu()
-        estimator.cam_model.cpu()
 
     torch.cuda.empty_cache()
 
@@ -865,24 +865,6 @@ def resize_and_pad(image_crop, target_size=256):
         value=[255, 255, 255],
     )
     return padded
-
-def convert_contacts(contact_labels, mapping):
-    """
-    Converts the contact labels from SMPL to SMPL-X format and vice-versa.
-    Taken from: https://github.com/sha2nkt/deco/blob/main/reformat_contacts.py
-
-    Args:
-        contact_labels: contact labels in SMPL or SMPL-X format
-        mapping: mapping from SMPL to SMPL-X vertices or vice-versa
-
-    Returns:
-        contact_labels_converted: converted contact labels
-    """
-    bs = contact_labels.shape[0]
-    mapping = mapping[None].expand(bs, -1, -1)
-    contact_labels_converted = torch.bmm(mapping, contact_labels[..., None])
-    contact_labels_converted = contact_labels_converted.squeeze()
-    return contact_labels_converted
 
 def convert_contacts(contact_labels, mapping):
     """
@@ -989,50 +971,6 @@ def get_contact_probs(
     torch.cuda.empty_cache()
 
     return split_cont
-
-def get_static_contacts(body_model, n_humans):
-    """
-    Computes static contact labels for a given body model and number of human instances.
-
-    This function loads predefined contact vertices for various body parts from JSON files
-    located in the "data/body_segments" directory. For each specified body part (e.g., 'L_Leg',
-    'R_Leg', 'L_Hand', 'R_Hand', 'gluteus', 'back', 'thighs'), it reads the vertex indices and
-    collects them into a unified list of unique contact vertices. It then creates a contact label
-    tensor of shape (n_humans, 10475) (with the assumption that the model has 10475 vertices),
-    initializing it with zeros on the CUDA device, and sets the contact indices to 1. If the
-    provided body model is "SMPL", the contact tensor is converted to the SMPL format using an
-    inverse mapping.
-
-    The contact labels are provided by PROX (https://prox.is.tue.mpg.de/).
-
-    Parameters:
-        body_model (str): The type of body model, e.g., "SMPL". Determines if conversion of
-                          the contact labels is required.
-        n_humans (int): The number of human instances for which to generate the contact label tensor.
-
-    Returns:
-        torch.Tensor: A tensor of shape (n_humans, 10475) with contact labels set to 1 for the
-                      defined contact vertices. If the body model is "SMPL", the tensor is
-                      converted to the SMPL vertex ordering.
-    """
-
-    all_contact_vertices = []
-    for part in ["L_Leg", "R_Leg", "L_Hand", "R_Hand", "gluteus", "back", "thighs"]:
-        with open(f"data/body_segments/{part}.json", "r") as f:
-            data = json.load(f)
-            all_contact_vertices.extend(list(set(data["verts_ind"])))
-
-    print("Total number of contact vertices:", len(all_contact_vertices))
-
-    # The contact labels are defined on the SMPL-X model with 10475 vertices
-    contacts = torch.zeros(n_humans, 10475).to("cuda")
-    contacts[:, all_contact_vertices] = 1
-
-    # Convert the contact labels to SMPL format if the body model is SMPL
-    if body_model == "SMPL":
-        contacts = convert_contacts(contacts, inv_mapping.to(contacts.device))
-
-    return contacts
 
 def get_contact_mask(
     scene_mesh, human_vertices, threshold=0.02, interpenetration_threshold=0.15

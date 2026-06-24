@@ -53,7 +53,6 @@ from human import (
     convert_smplx_to_coco_wholebody,
     get_point_visibility_mask,
     compute_camera_facing_mask,
-    get_static_contacts,
     COCO_WHOLEBODY_SKELETON_INFO,
     COCO_WHOLEBODY_KEYPOINTS,
     coco_wholebody_left_hand_joint_indices,
@@ -223,9 +222,7 @@ class HumanScene(nn.Module):
                 [self.image_np[:, :, ::-1]], [self.boxes], cfg.body_model
             )[0]
         else:
-            self.cont_vertices_conf = get_static_contacts(
-                "SMPLX", self.boxes.shape[0]
-            )
+            raise ValueError(f"Unsupported contact model: {cfg.contact}")
         self.register_buffer(
             "cont_vertices", torch.tensor(self.cont_vertices_conf >= 0.5)
         )

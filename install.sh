@@ -1,35 +1,30 @@
-export AM_I_DOCKER=False
-export BUILD_WITH_CUDA=True
+#!/usr/bin/env bash
+set -euo pipefail
 
-# create and activate a conda env outside this script
-# conda create -n physic python=3.10 -y
-# conda activate physic
+# Install uv first if needed:
+# curl -LsSf https://astral.sh/uv/install.sh | sh
 
-# Install PyTorch 2.3.1 + torchvision + torchaudio with CUDA 12.1.
-pip install torch==2.3.1 torchvision==0.18.1 torchaudio==2.3.1 --index-url https://download.pytorch.org/whl/cu121
+export AM_I_DOCKER="${AM_I_DOCKER:-False}"
+export BUILD_WITH_CUDA="${BUILD_WITH_CUDA:-True}"
+export FORCE_CUDA="${FORCE_CUDA:-1}"
+export PYOPENGL_PLATFORM="${PYOPENGL_PLATFORM:-egl}"
 
-pip install -U git+https://github.com/luca-medeiros/lang-segment-anything.git@918043ed4666eea04da88aa179eb8d27ef4b1a1d
-pip install git+https://github.com/jonbarron/robust_loss_pytorch
-pip install git+https://github.com/warmshao/WiLoR-mini@a20fc482e68d17c0c8fa19c64f3f4544b6a310cf
-pip install git+https://github.com/isarandi/smplfitter.git@13180c45a9201c8113690ad5158fad20b94be36b
+uv sync --extra cu128 --locked
 
-cd external/CameraHMR
-pip install -r requirements.txt
+uv pip install --no-deps \
+  -e external/ml-depth-pro \
+  -e external/ViTPose
 
-cd ../
-pip install -e ml-depth-pro
-pip install ninja==1.11.1.3             # required for fast building of pytorch3d
-pip install "git+https://github.com/facebookresearch/pytorch3d.git"
+uv pip install \
+  "git+https://github.com/luca-medeiros/lang-segment-anything.git@918043ed4666eea04da88aa179eb8d27ef4b1a1d" \
+  "git+https://github.com/jonbarron/robust_loss_pytorch@0c25c59ddbd0a14e5d963ae4f3847f8f3974fdc4" \
+  "git+https://github.com/warmshao/WiLoR-mini@a20fc482e68d17c0c8fa19c64f3f4544b6a310cf" \
+  "git+https://github.com/isarandi/smplfitter.git@13180c45a9201c8113690ad5158fad20b94be36b" \
+  "git+https://github.com/microsoft/MoGe.git@0286b495230a074aadf1c76cc5c679e943e5d1c6"
 
-cd ../
-pip install -r requirements.txt
+uv pip install --no-build-isolation \
+  "detectron2 @ git+https://github.com/facebookresearch/detectron2.git" \
+  "git+https://github.com/facebookresearch/pytorch3d.git"
 
-pip install -U openmim
-pip install git+https://github.com/open-mmlab/mmpose.git@v0.24.0#egg=mmpose
-mim install "mmcv==1.3.9" --no-deps
-mim install mmdet
-cd external
-pip install -v -e ViTPose
-
-# This is the final version that works with everything else
-pip install numpy==1.26.4
+uv run --no-sync mim install "mmcv==1.3.9" --no-deps
+uv run --no-sync mim install "mmdet==2.14.0" --no-deps

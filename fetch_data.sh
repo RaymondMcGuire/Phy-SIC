@@ -13,7 +13,9 @@ wget --post-data "username=$username&password=$password" 'https://download.is.tu
 unzip -o ./data/body_models/smpl/SMPL_python_v.1.1.0.zip -d ./data/body_models/smpl/
 mv ./data/body_models/smpl/SMPL_python_v.1.1.0/smpl/models/* ./data/body_models/smpl/
 rm -r ./data/body_models/smpl/SMPL_python_v.1.1.0 ./data/body_models/smpl/SMPL_python_v.1.1.0.zip
-ln -s ./data/body_models/smpl/basicmodel_neutral_lbs_10_207_0_v1.1.0.pkl ./data/body_models/smpl/SMPL_NEUTRAL.pkl
+ln -sf basicmodel_neutral_lbs_10_207_0_v1.1.0.pkl ./data/body_models/smpl/SMPL_NEUTRAL.pkl
+mkdir -p data/models/SMPL
+ln -sf ../../body_models/smpl/SMPL_NEUTRAL.pkl ./data/models/SMPL/SMPL_NEUTRAL.pkl
 
 echo -e "Please register at https://smpl-x.is.tue.mpg.de"
 read -p "Username (SMPL-X account): " username
@@ -27,10 +29,8 @@ wget --post-data "username=$username&password=$password" 'https://download.is.tu
 unzip -o ./data/body_models/smplx/models_smplx_v1_1.zip -d ./data/body_models/smplx/
 mv ./data/body_models/smplx/models/smplx/* ./data/body_models/smplx/
 rm -r ./data/body_models/smplx/models ./data/body_models/smplx/models_smplx_v1_1.zip
-
-wget --post-data "username=$username&password=$password" 'https://download.is.tue.mpg.de/download.php?domain=smplx&sfile=model_transfer.zip' -O './data/body_models/transfer.zip' --no-check-certificate --continue
-unzip ./data/body_models/transfer.zip smpl2smplx_deftrafo_setup.pkl  -d ./data/body_models/
-rm ./data/body_models/transfer.zip
+mkdir -p data/models/SMPLX
+ln -sf ../../body_models/smplx/SMPLX_NEUTRAL.npz ./data/models/SMPLX/SMPLX_NEUTRAL.npz
 
 echo -e "Please register at https://agora.is.tue.mpg.de"
 read -p "Username (CameraHMR account): " username
@@ -49,11 +49,11 @@ username=$(urle "${username}")
 password=$(urle "${password}")
 
 # CameraHMR checkpoints
-mkdir -p data/chmr
-wget --post-data "username=$username&password=$password" 'https://download.is.tue.mpg.de/download.php?domain=camerahmr&sfile=cam_model_cleaned.ckpt' -O './data/chmr/cam_model_cleaned.ckpt' --no-check-certificate --continue
-wget --post-data "username=$username&password=$password" 'https://download.is.tue.mpg.de/download.php?domain=camerahmr&sfile=camerahmr_checkpoint_cleaned.ckpt' -O './data/chmr/camerahmr_checkpoint_cleaned.ckpt' --no-check-certificate --continue
-wget --post-data "username=$username&password=$password" 'https://download.is.tue.mpg.de/download.php?domain=camerahmr&sfile=model_final_f05665.pkl' -O './data/chmr/model_final_f05665.pkl' --no-check-certificate --continue
-wget --post-data "username=$username&password=$password" 'https://download.is.tue.mpg.de/download.php?domain=camerahmr&sfile=smpl_mean_params.npz' -O './data/chmr/smpl_mean_params.npz' --no-check-certificate --continue
+mkdir -p data/pretrained-models
+wget --post-data "username=$username&password=$password" 'https://download.is.tue.mpg.de/download.php?domain=camerahmr&sfile=cam_model_cleaned.ckpt' -O './data/pretrained-models/cam_model_cleaned.ckpt' --no-check-certificate --continue
+wget --post-data "username=$username&password=$password" 'https://download.is.tue.mpg.de/download.php?domain=camerahmr&sfile=camerahmr_checkpoint_cleaned.ckpt' -O './data/pretrained-models/camerahmr_checkpoint_cleaned.ckpt' --no-check-certificate --continue
+wget --post-data "username=$username&password=$password" 'https://download.is.tue.mpg.de/download.php?domain=camerahmr&sfile=model_final_f05665.pkl' -O './data/pretrained-models/model_final_f05665.pkl' --no-check-certificate --continue
+wget --post-data "username=$username&password=$password" 'https://download.is.tue.mpg.de/download.php?domain=camerahmr&sfile=smpl_mean_params.npz' -O './data/smpl_mean_params.npz' --no-check-certificate --continue
 
 #ViTPose and Depth Pro
 wget https://huggingface.co/JunkyByte/easy_ViTPose/resolve/main/torch/wholebody/vitpose-h-wholebody.pth -O data/vitpose_huge_wholebody.pth
@@ -72,14 +72,3 @@ mv data/deco/data/smplx/smplx_neutral_tpose.ply data/body_models/smplx/
 mv data/deco/data/smpl/smpl_neutral_tpose.ply data/body_models/smpl/
 rm -r data/deco/data
 
-# For static contacts 
-
-# echo -e "Please register at https://prox.is.tue.mpg.de"
-# read -p "Username (PROX account): " username
-# read -p "Password (PROX account): " password
-# username=$(urle "${username}")
-# password=$(urle "${password}")
-
-# wget --post-data "username=$username&password=$password" "https://download.is.tue.mpg.de/download.php?domain=prox&resume=1&sfile=bodysegments.zip" -O "./data/bodysegments.zip" --no-check-certificate --continue
-# unzip -o ./data/bodysegments.zip -d ./data/
-# rm -r ./data/bodysegments.zip

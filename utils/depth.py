@@ -1,9 +1,12 @@
 import os
-import torch
+from dataclasses import replace
+from pathlib import Path
 
+import torch
 import numpy as np
 
 import depth_pro
+from depth_pro.depth_pro import DEFAULT_MONODEPTH_CONFIG_DICT
 
 from .utils import (
     align_depth,
@@ -13,6 +16,13 @@ from .utils import (
 )
 
 from moge.model.v1 import MoGeModel
+
+PROJECT_ROOT = Path(__file__).resolve().parents[1]
+DEPTH_PRO_CHECKPOINT = Path(
+    os.getenv("DEPTH_PRO_CHECKPOINT", PROJECT_ROOT / "data" / "depth_pro.pt")
+)
+if not DEPTH_PRO_CHECKPOINT.is_absolute():
+    DEPTH_PRO_CHECKPOINT = PROJECT_ROOT / DEPTH_PRO_CHECKPOINT
 
 enable_offload = not bool(os.getenv("DISABLE_OFFLOAD"))
 
@@ -44,7 +54,16 @@ def load_dpro(device="cuda"):
     if "dp_model" in globals() and dp_model is not None:
         pass
     else:
-        dp_model, transform = depth_pro.create_model_and_transforms()
+        if not DEPTH_PRO_CHECKPOINT.exists():
+            raise FileNotFoundError(
+                f"DepthPro checkpoint not found: {DEPTH_PRO_CHECKPOINT}. "
+                "Run fetch_data.sh/fetch_data.bat or set DEPTH_PRO_CHECKPOINT."
+            )
+        config = replace(
+            DEFAULT_MONODEPTH_CONFIG_DICT,
+            checkpoint_uri=str(DEPTH_PRO_CHECKPOINT),
+        )
+        dp_model, transform = depth_pro.create_model_and_transforms(config=config)
         dp_model.eval()
         if enable_offload:
             dp_model.to("cpu")

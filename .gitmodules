@@ -1,0 +1,9 @@
+[submodule "external/CameraHMR"]
+	path = external/CameraHMR
+	url = https://github.com/RaymondMcGuire/CameraHMR.git
+[submodule "external/ml-depth-pro"]
+	path = external/ml-depth-pro
+	url = https://github.com/apple/ml-depth-pro.git
+[submodule "external/ViTPose"]
+	path = external/ViTPose
+	url = https://github.com/ViTAE-Transformer/ViTPose.git

@@ -1,0 +1,21 @@
+services:
+  physic:
+    image: physic:cu128
+    build:
+      context: .
+      args:
+        CUDA_IMAGE: ${PHYSIC_CUDA_IMAGE:-nvidia/cuda:12.8.0-devel-ubuntu22.04}
+        TORCH_CUDA_ARCH_LIST: ${TORCH_CUDA_ARCH_LIST:-12.0}
+    working_dir: /workspace/Phy-SIC
+    gpus: all
+    shm_size: "16gb"
+    environment:
+      CAMERAHMR_DATA_DIR: /workspace/Phy-SIC/data
+      DEPTH_PRO_CHECKPOINT: /workspace/Phy-SIC/data/depth_pro.pt
+      PYOPENGL_PLATFORM: egl
+    volumes:
+      - .:/workspace/Phy-SIC
+      - ${PHYSIC_DATA_DIR:-./data}:/workspace/Phy-SIC/data
+      - ${PHYSIC_IMAGES_DIR:-./images}:/workspace/Phy-SIC/images
+      - ${PHYSIC_OUTPUTS_DIR:-./outputs}:/workspace/Phy-SIC/outputs
+    command: ["uv", "run", "--no-sync", "python", "run_optimizer.py"]
