@@ -91,6 +91,30 @@ def _resolve_local_hf_snapshot(repo_id: str) -> str:
         ) from exc
 
 
+def _resolve_local_hf_file(repo_id: str, filenames: tuple[str, ...]) -> str:
+    snapshot_dir = Path(_resolve_local_hf_snapshot(repo_id))
+    for filename in filenames:
+        path = snapshot_dir / filename
+        if path.is_file():
+            return str(path)
+
+    candidates = [
+        path
+        for pattern in ("*.pt", "*.pth", "*.bin", "*.safetensors")
+        for path in snapshot_dir.rglob(pattern)
+        if path.is_file()
+    ]
+    if len(candidates) == 1:
+        return str(candidates[0])
+
+    expected = ", ".join(filenames)
+    found = ", ".join(str(path.relative_to(snapshot_dir)) for path in candidates)
+    raise FileNotFoundError(
+        f"Hugging Face repo {repo_id} did not contain an expected checkpoint "
+        f"file ({expected}) under {snapshot_dir}. Found: {found or 'none'}."
+    )
+
+
 # Load the model from the pre-downloaded Hugging Face cache.
 def load_moge(device="cuda"):
     global moge_model
@@ -99,7 +123,7 @@ def load_moge(device="cuda"):
     else:
         # moge_model = MoGeModel.from_pretrained("Ruicheng/moge-2-vitl")
         moge_model = MoGeModel.from_pretrained(
-            _resolve_local_hf_snapshot("Ruicheng/moge-vitl")
+            _resolve_local_hf_file("Ruicheng/moge-vitl", ("model.pt",))
         )
         moge_model.eval()
         if enable_offload:
