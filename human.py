@@ -1,5 +1,6 @@
 import os
 import sys
+import inspect
 import trimesh
 import torch
 import cv2
@@ -19,6 +20,14 @@ sys.path = [
 
 os.environ.setdefault("DATA_ROOT", "data")
 os.environ.setdefault("CAMERAHMR_DATA_DIR", os.path.join(PROJECT_ROOT, "data"))
+
+
+def _load_trusted_checkpoint(path, **kwargs):
+    """Load legacy project checkpoints on PyTorch 2.6+."""
+    kwargs.setdefault("map_location", "cpu")
+    if "weights_only" in inspect.signature(torch.load).parameters:
+        kwargs.setdefault("weights_only", False)
+    return torch.load(path, **kwargs)
 
 import numpy as np
 import open3d as o3d
@@ -170,7 +179,7 @@ def load_deco():
     global deco_model
     if "deco_model" not in globals() or deco_model is None:
         deco_model = DECO("hrnet", True, "cpu")
-        checkpoint = torch.load("data/deco/deco_best.pth")
+        checkpoint = _load_trusted_checkpoint("data/deco/deco_best.pth")
         deco_model.load_state_dict(checkpoint["deco"], strict=True)
         deco_model.eval()
         if not enable_offload:

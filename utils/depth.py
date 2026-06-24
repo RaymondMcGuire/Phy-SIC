@@ -1,4 +1,6 @@
 import os
+import inspect
+from contextlib import contextmanager
 from dataclasses import replace
 from pathlib import Path
 
@@ -25,6 +27,30 @@ if not DEPTH_PRO_CHECKPOINT.is_absolute():
     DEPTH_PRO_CHECKPOINT = PROJECT_ROOT / DEPTH_PRO_CHECKPOINT
 
 enable_offload = not bool(os.getenv("DISABLE_OFFLOAD"))
+
+
+def _torch_load_accepts_weights_only() -> bool:
+    return "weights_only" in inspect.signature(torch.load).parameters
+
+
+@contextmanager
+def _depth_pro_weights_only_load():
+    """Keep the Depth Pro submodule untouched while loading plain weight files."""
+    if not _torch_load_accepts_weights_only():
+        yield
+        return
+
+    original_load = torch.load
+
+    def load_with_weights_only(*args, **kwargs):
+        kwargs.setdefault("weights_only", True)
+        return original_load(*args, **kwargs)
+
+    torch.load = load_with_weights_only
+    try:
+        yield
+    finally:
+        torch.load = original_load
 
 
 def _hf_cache_dir() -> Path:
@@ -104,7 +130,8 @@ def load_dpro(device="cuda"):
             DEFAULT_MONODEPTH_CONFIG_DICT,
             checkpoint_uri=str(DEPTH_PRO_CHECKPOINT),
         )
-        dp_model, transform = depth_pro.create_model_and_transforms(config=config)
+        with _depth_pro_weights_only_load():
+            dp_model, transform = depth_pro.create_model_and_transforms(config=config)
         dp_model.eval()
         if enable_offload:
             dp_model.to("cpu")

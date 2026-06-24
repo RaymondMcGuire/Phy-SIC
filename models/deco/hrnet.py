@@ -1,4 +1,5 @@
 import os
+import inspect
 
 import torch
 import torch.nn as nn
@@ -12,6 +13,13 @@ models = [
 ]
 
 BN_MOMENTUM = 0.1
+
+
+def _torch_load_weights(path):
+    kwargs = {}
+    if "weights_only" in inspect.signature(torch.load).parameters:
+        kwargs["weights_only"] = True
+    return torch.load(path, **kwargs)
 
 
 def conv3x3(in_planes, out_planes, stride=1):
@@ -596,7 +604,7 @@ class PoseHighResolutionNet(nn.Module):
                         nn.init.constant_(m.bias, 0)
 
         if os.path.isfile(pretrained):
-            pretrained_state_dict = torch.load(pretrained)
+            pretrained_state_dict = _torch_load_weights(pretrained)
             logger.info("=> loading pretrained model {}".format(pretrained))
 
             need_init_state_dict = {}
