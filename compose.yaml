@@ -6,13 +6,23 @@ services:
       args:
         CUDA_IMAGE: ${PHYSIC_CUDA_IMAGE:-nvidia/cuda:12.8.0-devel-ubuntu22.04}
         TORCH_CUDA_ARCH_LIST: ${TORCH_CUDA_ARCH_LIST:-12.0}
+        PHYSIC_BUILD_JOBS: ${PHYSIC_BUILD_JOBS:-2}
+        UV_CONCURRENT_DOWNLOADS: ${UV_CONCURRENT_DOWNLOADS:-2}
+        UV_CONCURRENT_BUILDS: ${UV_CONCURRENT_BUILDS:-1}
+        UV_CONCURRENT_INSTALLS: ${UV_CONCURRENT_INSTALLS:-2}
     working_dir: /workspace/Phy-SIC
     gpus: all
+    cpus: ${PHYSIC_CPUS:-8}
+    mem_limit: ${PHYSIC_MEM_LIMIT:-32g}
     shm_size: "16gb"
     environment:
       CAMERAHMR_DATA_DIR: /workspace/Phy-SIC/data
       DEPTH_PRO_CHECKPOINT: /workspace/Phy-SIC/data/depth_pro.pt
       PYOPENGL_PLATFORM: egl
+      MAX_JOBS: ${PHYSIC_BUILD_JOBS:-2}
+      UV_CONCURRENT_DOWNLOADS: ${UV_CONCURRENT_DOWNLOADS:-2}
+      UV_CONCURRENT_BUILDS: ${UV_CONCURRENT_BUILDS:-1}
+      UV_CONCURRENT_INSTALLS: ${UV_CONCURRENT_INSTALLS:-2}
     volumes:
       - .:/workspace/Phy-SIC
       - ${PHYSIC_DATA_DIR:-./data}:/workspace/Phy-SIC/data

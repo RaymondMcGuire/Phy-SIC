@@ -14,6 +14,18 @@ docker compose run --rm physic
 
 By default, compose mounts `data/`, `images/`, and `outputs/` from the host into the container.
 
+If the build stalls or the machine runs out of memory, lower the build/download concurrency before building:
+
+```powershell
+$env:PHYSIC_BUILD_JOBS="1"
+$env:UV_CONCURRENT_DOWNLOADS="1"
+$env:UV_CONCURRENT_BUILDS="1"
+$env:UV_CONCURRENT_INSTALLS="1"
+docker compose build physic --progress=plain
+```
+
+The compose file also defaults the runtime container to `PHYSIC_CPUS=8` and `PHYSIC_MEM_LIMIT=32g`. These limits do not fully cap Docker BuildKit during image build; for build-time memory pressure, also set Docker Desktop or WSL resource limits.
+
 #### Local uv setup
 If you want a local Linux/WSL environment instead of Docker, install uv first and then run:
 
