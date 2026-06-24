@@ -21,6 +21,8 @@ from models.omnieraser.pipeline_flux_control_removal import FluxControlRemovalPi
 os.environ["TOKENIZERS_PARALLELISM"] = "false"
 PROJECT_ROOT = Path(__file__).resolve().parent
 enable_offload = not bool(os.getenv("DISABLE_OFFLOAD"))
+OMNI_DEVICE = os.getenv("PHYSIC_OMNI_DEVICE", "cuda")
+OMNI_OFFLOAD = os.getenv("PHYSIC_OMNI_OFFLOAD", "model").lower()
 
 
 def _hf_cache_dir() -> Path:
@@ -123,7 +125,7 @@ def load_omni():
             transformer=transformer,
             torch_dtype=torch.bfloat16,
             local_files_only=True,
-        ).to("cuda")
+        )
         pipe.transformer.to(torch.bfloat16)
         assert pipe.transformer.config.in_channels == initial_input_channels * 4, (
             f"{pipe.transformer.config.in_channels=}"
@@ -135,9 +137,14 @@ def load_omni():
             local_files_only=True,
         )
         if enable_offload:
-            pipe.to("cpu")
+            if OMNI_OFFLOAD == "sequential":
+                pipe.enable_sequential_cpu_offload(device=OMNI_DEVICE)
+            else:
+                pipe.enable_model_cpu_offload(device=OMNI_DEVICE)
+            pipe._physic_cpu_offload_enabled = True
         else:
-            pipe.to("cuda")
+            pipe.to(OMNI_DEVICE)
+            pipe._physic_cpu_offload_enabled = False
 
 
 def delete_omni():
@@ -170,8 +177,9 @@ def get_inpainted_image_omni(image, mask):
         - A torch.Generator is created with a fixed seed (42) for reproducibility.
     """
 
-    if enable_offload:
-        pipe.to("cuda")
+    cpu_offload_enabled = bool(getattr(pipe, "_physic_cpu_offload_enabled", False))
+    if enable_offload and not cpu_offload_enabled:
+        pipe.to(OMNI_DEVICE)
 
     prompt = "There is nothing here."
 
@@ -179,7 +187,7 @@ def get_inpainted_image_omni(image, mask):
     image = image.convert("RGB").resize((1024, 1024), Image.LANCZOS)
     mask = mask.convert("RGB").resize((1024, 1024), Image.LANCZOS)
 
-    generator = torch.Generator(device="cuda").manual_seed(42)
+    generator = torch.Generator(device=OMNI_DEVICE).manual_seed(42)
 
     # Inpaint
     result = pipe(
@@ -197,7 +205,7 @@ def get_inpainted_image_omni(image, mask):
     # Resize back to original size
     result = result.resize(original_size, Image.LANCZOS)
 
-    if enable_offload:
+    if enable_offload and not cpu_offload_enabled:
         pipe.to("cpu")
         torch.cuda.empty_cache()
 
