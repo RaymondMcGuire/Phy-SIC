@@ -1,6 +1,7 @@
 import os
 import sys
 import inspect
+import shutil
 import trimesh
 import torch
 import cv2
@@ -105,14 +106,55 @@ def _patch_wilor_hf_download_for_local_cache():
         return
 
     def hf_hub_download_from_cache(*args, **kwargs):
-        kwargs.pop("local_dir", None)
+        local_dir = kwargs.pop("local_dir", None)
+        subfolder = kwargs.get("subfolder")
+        filename = kwargs.get("filename")
+        if filename is None and len(args) >= 2:
+            filename = args[1]
         kwargs.pop("local_dir_use_symlinks", None)
         kwargs.setdefault("cache_dir", _hf_cache_dir())
         kwargs.setdefault("local_files_only", True)
-        return original_download(*args, **kwargs)
+        cached_path = original_download(*args, **kwargs)
+
+        if local_dir and filename:
+            target_path = os.path.join(local_dir, subfolder or "", filename)
+            os.makedirs(os.path.dirname(target_path), exist_ok=True)
+            if not os.path.exists(target_path):
+                shutil.copy2(cached_path, target_path)
+            return target_path
+
+        return cached_path
 
     wilor_pipeline.hf_hub_download = hf_hub_download_from_cache
     wilor_pipeline._physic_hf_download_patched = True
+
+
+def _sync_wilor_pretrained_models_from_cache():
+    snapshot_dir = _ensure_local_hf_snapshot("warmshao/WiLoR-mini")
+    source_dir = os.path.join(snapshot_dir, "pretrained_models")
+    if not os.path.isdir(source_dir):
+        raise FileNotFoundError(
+            f"WiLoR-mini cache is missing pretrained_models/: {source_dir}. "
+            "Rerun fetch_hf_data.bat -SkipGated."
+        )
+
+    package_root = os.path.abspath(os.path.join(os.path.dirname(wilor_pipeline.__file__), ".."))
+    target_dir = os.path.join(package_root, "pretrained_models")
+    os.makedirs(target_dir, exist_ok=True)
+
+    for root, _, files in os.walk(source_dir):
+        rel_dir = os.path.relpath(root, source_dir)
+        out_dir = target_dir if rel_dir == "." else os.path.join(target_dir, rel_dir)
+        os.makedirs(out_dir, exist_ok=True)
+        for filename in files:
+            source_path = os.path.join(root, filename)
+            target_path = os.path.join(out_dir, filename)
+            if (
+                os.path.exists(target_path)
+                and os.path.getsize(target_path) == os.path.getsize(source_path)
+            ):
+                continue
+            shutil.copy2(source_path, target_path)
 
 # Taken from sapiens (https://github.com/facebookresearch/sapiens)
 COCO_WHOLEBODY_SKELETON_INFO = {
@@ -262,7 +304,7 @@ def delete_deco():
 def load_wilor():
     global pipe_hand
     if "pipe_hand" not in globals() or pipe_hand is None:
-        _ensure_local_hf_snapshot("warmshao/WiLoR-mini")
+        _sync_wilor_pretrained_models_from_cache()
         _patch_wilor_hf_download_for_local_cache()
         pipe_hand = WiLorHandPose3dEstimationPipeline(
             device="cuda", dtype=torch.float16, verbose=False
