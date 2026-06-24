@@ -8,6 +8,7 @@ import cv2
 import smplx
 import pickle
 from PIL import Image
+from contextlib import contextmanager
 from multiprocessing import Pool
 from typing import List
 
@@ -23,12 +24,35 @@ os.environ.setdefault("DATA_ROOT", "data")
 os.environ.setdefault("CAMERAHMR_DATA_DIR", os.path.join(PROJECT_ROOT, "data"))
 
 
+def _torch_load_accepts_weights_only():
+    return "weights_only" in inspect.signature(torch.load).parameters
+
+
 def _load_trusted_checkpoint(path, **kwargs):
     """Load legacy project checkpoints on PyTorch 2.6+."""
     kwargs.setdefault("map_location", "cpu")
-    if "weights_only" in inspect.signature(torch.load).parameters:
+    if _torch_load_accepts_weights_only():
         kwargs.setdefault("weights_only", False)
     return torch.load(path, **kwargs)
+
+
+@contextmanager
+def _trusted_torch_load():
+    if not _torch_load_accepts_weights_only():
+        yield
+        return
+
+    original_load = torch.load
+
+    def load_with_legacy_checkpoint_support(*args, **kwargs):
+        kwargs.setdefault("weights_only", False)
+        return original_load(*args, **kwargs)
+
+    torch.load = load_with_legacy_checkpoint_support
+    try:
+        yield
+    finally:
+        torch.load = original_load
 
 import numpy as np
 import open3d as o3d
@@ -306,9 +330,10 @@ def load_wilor():
     if "pipe_hand" not in globals() or pipe_hand is None:
         _sync_wilor_pretrained_models_from_cache()
         _patch_wilor_hf_download_for_local_cache()
-        pipe_hand = WiLorHandPose3dEstimationPipeline(
-            device="cuda", dtype=torch.float16, verbose=False
-        )
+        with _trusted_torch_load():
+            pipe_hand = WiLorHandPose3dEstimationPipeline(
+                device="cuda", dtype=torch.float16, verbose=False
+            )
         if enable_offload:
             pipe_hand.wilor_model.cpu()
             pipe_hand.hand_detector.cpu()
