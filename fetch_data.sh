@@ -75,6 +75,10 @@ wget https://raw.githubusercontent.com/open-mmlab/mmpose/v1.3.2/configs/_base_/d
 wget https://download.openmmlab.com/mmpose/v1/projects/rtmposev1/rtmpose-l_simcc-coco-wholebody_pt-aic-coco_270e-256x192-6f206314_20230124.pth -O data/mmpose/rtmpose-l_simcc-coco-wholebody_pt-aic-coco_270e-256x192-6f206314_20230124.pth
 wget https://ml-site.cdn-apple.com/models/depth-pro/depth_pro.pt -P data/
 
+# Torch hub runtime checkpoints
+mkdir -p data/torch/hub/checkpoints
+wget https://dl.fbaipublicfiles.com/segment_anything_2/092824/sam2.1_hiera_large.pt -O data/torch/hub/checkpoints/sam2.1_hiera_large.pt
+
 # Deco checkpoints and data
 mkdir -p data/deco
 wget https://keeper.mpdl.mpg.de/f/6f2e2258558f46ceb269/?dl=1 --max-redirect=2 --trust-server-names -O data/deco/Release_Checkpoint.tar.gz && tar -xvf data/deco/Release_Checkpoint.tar.gz --directory data/deco && rm -r data/deco/Release_Checkpoint.tar.gz

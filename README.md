@@ -40,6 +40,14 @@ fetch_data.bat
 This requires access to [SMPL](https://smpl.is.tue.mpg.de/), [SMPL-X](https://smpl-x.is.tue.mpg.de/), [AGORA](https://agora.is.tue.mpg.de/), and [CameraHMR](https://camerahmr.is.tue.mpg.de/). Please enter the credentials when prompted.
 The MMPose RTMPose whole-body config/checkpoint is downloaded into `data/mmpose/`; Docker Compose mounts `data/` into the container by default. To use a different host model folder, set `PHYSIC_DATA_DIR` before running Compose.
 
+Runtime models from Hugging Face can also be pre-downloaded into the mounted `data/huggingface/` cache. On Windows, use:
+
+```bat
+fetch_hf_data.bat
+```
+
+This creates a lightweight `.hf-download-venv` for `huggingface_hub` only, downloads into the local `data/` folder, and lets Docker read the same files through `PHYSIC_DATA_DIR`. `black-forest-labs/FLUX.1-dev` is gated, so `fetch_hf_data.bat` downloads it by default and needs `HF_TOKEN` in `.env` after accepting the model license on Hugging Face. Docker runtime is forced offline for Hugging Face and does not receive the token.
+
 ### Running the Code
 To run the code, please copy images to the `images/` directory. Then, execute the following command:
 ```bash

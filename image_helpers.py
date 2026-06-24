@@ -2,9 +2,6 @@ import os
 import cv2
 import torch
 import numpy as np
-import dotenv
-
-dotenv.load_dotenv()
 
 from lang_sam import LangSAM
 from concurrent.futures import ThreadPoolExecutor
@@ -57,6 +54,7 @@ def load_omni():
             "black-forest-labs/FLUX.1-dev",
             subfolder="transformer",
             torch_dtype=torch.bfloat16,
+            local_files_only=True,
         )
 
         with torch.no_grad():
@@ -81,6 +79,7 @@ def load_omni():
             "black-forest-labs/FLUX.1-dev",
             transformer=transformer,
             torch_dtype=torch.bfloat16,
+            local_files_only=True,
         ).to("cuda")
         pipe.transformer.to(torch.bfloat16)
         assert pipe.transformer.config.in_channels == initial_input_channels * 4, (
@@ -90,6 +89,7 @@ def load_omni():
         pipe.load_lora_weights(
             "theSure/Omnieraser",
             weight_name="pytorch_lora_weights.safetensors",
+            local_files_only=True,
         )
         if enable_offload:
             pipe.to("cpu")

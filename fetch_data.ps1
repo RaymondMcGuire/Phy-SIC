@@ -452,6 +452,15 @@ function Ensure-MmposeAndDepthPro {
   }
 }
 
+function Ensure-TorchHubModels {
+  $specs = @(
+    New-GetSpec "https://dl.fbaipublicfiles.com/segment_anything_2/092824/sam2.1_hiera_large.pt" (Join-DataPath @("torch", "hub", "checkpoints", "sam2.1_hiera_large.pt")) 100000000
+  )
+  foreach ($spec in $specs) {
+    Invoke-GetDownload $spec
+  }
+}
+
 function Ensure-Deco {
   $decoDir = Join-DataPath @("deco")
   New-Directory $decoDir
@@ -518,6 +527,7 @@ Ensure-SmplxTransfer
 Ensure-AgoraKidTemplates
 Ensure-CameraHmr
 Ensure-MmposeAndDepthPro
+Ensure-TorchHubModels
 Ensure-Deco
 
 Write-Host ""
