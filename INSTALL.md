@@ -8,11 +8,20 @@ The maintained setup is CUDA 12.8 + PyTorch 2.7.1 through uv:
 
 ```sh
 git submodule update --init --recursive
+cp .env.example .env
 docker compose build physic
 docker compose run --rm physic
 ```
 
-By default, compose mounts `data/`, `images/`, and `outputs/` from the host into the container. If you download model data on Windows into another folder, point Compose at it before running:
+By default, compose mounts `data/`, `images/`, and `outputs/` from the compose checkout into the container. Edit `.env` if the model data lives elsewhere. For example, if you run Compose from WSL `~/project/Phy-SIC` but downloaded data on Windows under `D:\SMPL-project\Phy-SIC\data`, set:
+
+```env
+PHYSIC_DATA_DIR=/mnt/d/SMPL-project/Phy-SIC/data
+PHYSIC_IMAGES_DIR=/mnt/d/SMPL-project/Phy-SIC/images
+PHYSIC_OUTPUTS_DIR=/mnt/d/SMPL-project/Phy-SIC/outputs
+```
+
+PowerShell can also override a single run:
 
 ```powershell
 $env:PHYSIC_DATA_DIR="D:\SMPL-project\Phy-SIC\data"
