@@ -32,6 +32,7 @@ def _load_trusted_checkpoint(path, **kwargs):
 import numpy as np
 import open3d as o3d
 from torchvision.transforms import Normalize
+import wilor_mini.pipelines.wilor_hand_pose3d_estimation_pipeline as wilor_pipeline
 from wilor_mini.pipelines.wilor_hand_pose3d_estimation_pipeline import (
     WiLorHandPose3dEstimationPipeline,
 )
@@ -49,6 +50,69 @@ from models.hsfm.joint_names import COCO_WHOLEBODY_KEYPOINTS, ORIGINAL_SMPLX_JOI
 from utils.geometry import aa_to_rotmat, rotmat_to_aa
 from utils.utils import find_closest_boxes_by_iou
 from utils.constants import part_segments
+
+
+def _hf_cache_dir():
+    return (
+        os.getenv("HF_HUB_CACHE")
+        or os.getenv("HUGGINGFACE_HUB_CACHE")
+        or os.path.join(PROJECT_ROOT, "data", "huggingface", "hub")
+    )
+
+
+def _cached_snapshot_fallback(repo_id):
+    snapshots_dir = os.path.join(
+        _hf_cache_dir(), f"models--{repo_id.replace('/', '--')}", "snapshots"
+    )
+    if not os.path.isdir(snapshots_dir):
+        return None
+    snapshots = [
+        os.path.join(snapshots_dir, name)
+        for name in os.listdir(snapshots_dir)
+        if os.path.isdir(os.path.join(snapshots_dir, name))
+    ]
+    if not snapshots:
+        return None
+    return max(snapshots, key=os.path.getmtime)
+
+
+def _ensure_local_hf_snapshot(repo_id):
+    from huggingface_hub import snapshot_download
+
+    try:
+        return snapshot_download(
+            repo_id=repo_id,
+            cache_dir=_hf_cache_dir(),
+            local_files_only=True,
+        )
+    except Exception as exc:
+        fallback = _cached_snapshot_fallback(repo_id)
+        if fallback:
+            return fallback
+        raise FileNotFoundError(
+            f"Hugging Face model cache not found for {repo_id}. "
+            "Run fetch_hf_data.bat on Windows first, then make sure "
+            "PHYSIC_DATA_DIR maps that data folder into Docker."
+        ) from exc
+
+
+def _patch_wilor_hf_download_for_local_cache():
+    if getattr(wilor_pipeline, "_physic_hf_download_patched", False):
+        return
+
+    original_download = getattr(wilor_pipeline, "hf_hub_download", None)
+    if original_download is None:
+        return
+
+    def hf_hub_download_from_cache(*args, **kwargs):
+        kwargs.pop("local_dir", None)
+        kwargs.pop("local_dir_use_symlinks", None)
+        kwargs.setdefault("cache_dir", _hf_cache_dir())
+        kwargs.setdefault("local_files_only", True)
+        return original_download(*args, **kwargs)
+
+    wilor_pipeline.hf_hub_download = hf_hub_download_from_cache
+    wilor_pipeline._physic_hf_download_patched = True
 
 # Taken from sapiens (https://github.com/facebookresearch/sapiens)
 COCO_WHOLEBODY_SKELETON_INFO = {
@@ -198,6 +262,8 @@ def delete_deco():
 def load_wilor():
     global pipe_hand
     if "pipe_hand" not in globals() or pipe_hand is None:
+        _ensure_local_hf_snapshot("warmshao/WiLoR-mini")
+        _patch_wilor_hf_download_for_local_cache()
         pipe_hand = WiLorHandPose3dEstimationPipeline(
             device="cuda", dtype=torch.float16, verbose=False
         )

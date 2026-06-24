@@ -25,6 +25,7 @@ if ($Help) {
   Write-Host "  2. Accept/request access on https://huggingface.co/theSure/Omnieraser"
   Write-Host "  3. Put HF_TOKEN=hf_xxx in .env, pass -Token hf_xxx, or paste it when prompted"
   Write-Host ""
+  Write-Host "Also downloads public runtime repos such as MoGe, GroundingDINO, and WiLoR-mini."
   Write-Host "This script creates .hf-download-venv with only huggingface_hub tools."
   exit 0
 }

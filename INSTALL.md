@@ -19,7 +19,7 @@ To pre-download runtime Hugging Face models into the mounted data cache on Windo
 fetch_hf_data.bat
 ```
 
-This downloads into the local `data/huggingface/` cache. Docker then reads it through the `PHYSIC_DATA_DIR` volume mapping. Docker runtime is forced offline for Hugging Face and does not receive `HF_TOKEN`.
+This downloads into the local `data/huggingface/` cache, including public runtime repos such as MoGe, GroundingDINO, and WiLoR-mini. Docker then reads it through the `PHYSIC_DATA_DIR` volume mapping. Docker runtime is forced offline for Hugging Face and does not receive `HF_TOKEN`.
 
 By default, compose mounts `data/`, `images/`, and `outputs/` from the compose checkout into the container. Edit `.env` if the model data lives elsewhere. For example, if you run Compose from WSL `~/project/Phy-SIC` but downloaded data on Windows under `D:\SMPL-project\Phy-SIC\data`, set:
 

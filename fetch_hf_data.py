@@ -13,6 +13,7 @@ HF_REPOS = [
     ("theSure/Omnieraser", True),
     ("Ruicheng/moge-vitl", False),
     ("IDEA-Research/grounding-dino-base", False),
+    ("warmshao/WiLoR-mini", False),
 ]
 
 

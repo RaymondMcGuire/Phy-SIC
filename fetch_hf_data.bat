@@ -17,6 +17,7 @@ echo Phy-SIC Hugging Face runtime model downloader
 echo.
 echo This downloads model caches on Windows into the local data\huggingface folder.
 echo Docker can then read them through the PHYSIC_DATA_DIR volume mapping.
+echo Public runtime repos such as MoGe, GroundingDINO, and WiLoR-mini are included.
 echo Gated models FLUX.1-dev and Omnieraser will be downloaded too.
 echo They require HF_TOKEN in .env and accepted Hugging Face access.
 echo.
