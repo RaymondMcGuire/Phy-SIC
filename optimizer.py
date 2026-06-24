@@ -118,10 +118,15 @@ class HumanScene(nn.Module):
         self.mask_floor = np.stack(self.masks_floor, axis=0).max(axis=0)
 
         if cfg.inpaint_model == "omni":
+            print("[HumanScene] Running OmniEraser inpainting...", flush=True)
             self.scene_image = get_inpainted_image_omni(
                 self.image, Image.fromarray(self.mask_org)
             )
             self.scene_image.save(self.outpath / "scene_image.png")
+            print(
+                f"[HumanScene] Saved inpainted scene image: {self.outpath / 'scene_image.png'}",
+                flush=True,
+            )
         else:
             raise ValueError("Only omni inpainting is supported currently.")
 
@@ -157,9 +162,12 @@ class HumanScene(nn.Module):
         # Initialize the human mesh, contact vertices, and 2D pose.
         ###########################################################
         self.n_humans = self.boxes.shape[0]
+        print(f"[HumanScene] Detected {self.n_humans} human(s).", flush=True)
+        print("[HumanScene] Running MMPose whole-body keypoints...", flush=True)
         keypoints_2d, scores_2d = get_human_pose_2d_mmpose(
             self.image_np, self.boxes
         )
+        print("[HumanScene] MMPose keypoints complete.", flush=True)
         conf_2d = torch.tensor(scores_2d).float()
         conf_2d_thresh = conf_2d.clone()
         # if the confidence is less than the threshold, we set it to 0.
@@ -189,6 +197,7 @@ class HumanScene(nn.Module):
             ] = 0
 
         # run CHMR to get the human mesh, camera intrinsics, SMPL(X) parameters, and the output camera transformation.
+        print("[HumanScene] Running CameraHMR human mesh estimation...", flush=True)
         mesh, cam_intr, out_body_params, output_cam_trans, _, _ = process_human(
             self.image_np,
             body_model=cfg.body_model,
@@ -198,6 +207,7 @@ class HumanScene(nn.Module):
             keypoint_scores=scores_2d,
             smpl_model=cfg.smpl_model,
         )
+        print("[HumanScene] CameraHMR human mesh estimation complete.", flush=True)
 
         assert (
             "betas" in out_body_params
@@ -218,9 +228,11 @@ class HumanScene(nn.Module):
 
         # initialize the contact vertices for each human.
         if cfg.contact == "deco":
+            print("[HumanScene] Running DECO contact prediction...", flush=True)
             self.cont_vertices_conf = get_contact_probs(
                 [self.image_np[:, :, ::-1]], [self.boxes], cfg.body_model
             )[0]
+            print("[HumanScene] DECO contact prediction complete.", flush=True)
         else:
             raise ValueError(f"Unsupported contact model: {cfg.contact}")
         self.register_buffer(
@@ -241,11 +253,13 @@ class HumanScene(nn.Module):
             raise ValueError("f_px should be 'chmr', 'dpro', or a float/int value.")
 
         # run depthpro to get the depth map and the camera intrinsics.
+        print("[HumanScene] Running MoGe + DepthPro scene depth...", flush=True)
         depth, depth_human, pts3d, pts3d_human, K = (
             run_metric_moge_with_human_from_depthpro(
                 self.scene_image_np, self.image_np, self.mask_org, f_px=f_px_gt
             )
         )  # cam_intr[0, 0])
+        print("[HumanScene] Scene depth complete.", flush=True)
         self.register_buffer("depth", torch.from_numpy(depth).float())
         self.register_buffer("K", torch.from_numpy(K).float())
         if cfg.f_px == "moge" or cfg.f_px == "moge_c":
@@ -327,11 +341,13 @@ class HumanScene(nn.Module):
 
         if cfg.compute_floor_points:
             # compute the floor plane for the scene points.
+            print("[HumanScene] Computing floor plane.", flush=True)
             self.plane_points, self.plane_normal, self.plane_d = extend_floor_plane(
                 self.pts3d_all,
                 all_normals,
                 self.mask_floor & self.inlier_mask.cpu().numpy(),
             )
+            print("[HumanScene] Floor plane complete.", flush=True)
         else:
             print("Floor plane not computed, skipping.")
             self.plane_points, self.plane_normal, self.plane_d = (
@@ -387,7 +403,9 @@ class HumanScene(nn.Module):
         ######################################################################
         # Coarse optimization: optimize the camera translation and body betas.
         ######################################################################
+        print("[HumanScene] Starting optimization stage opt_1.", flush=True)
         self.optimize(**cfg["opt_1"])
+        print("[HumanScene] Finished optimization stage opt_1.", flush=True)
 
         ###########################################################################
         # Handle occluded or truncated mesh vertices after the coarse optimization.
@@ -429,8 +447,12 @@ class HumanScene(nn.Module):
 
         print("Completed the initialization of the HumanScene module.")
 
+        print("[HumanScene] Starting optimization stage opt_2.", flush=True)
         self.optimize(**cfg["opt_2"])
+        print("[HumanScene] Finished optimization stage opt_2.", flush=True)
+        print("[HumanScene] Starting optimization stage opt_3.", flush=True)
         self.optimize(**cfg["opt_3"])
+        print("[HumanScene] Finished optimization stage opt_3.", flush=True)
 
     def forward(self):
         body_params_rotmat = {
