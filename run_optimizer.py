@@ -89,6 +89,8 @@ load_dpro()
 print("Time taken to load dpro: {:.4f} seconds".format(time.time() - t0))
 
 output_foldername = cfg.run_name
+output_root = Path("outputs") / output_foldername
+print(f"Output root: {output_root.resolve()}")
 image_paths = list(glob.glob("./images/*"))
 
 failed_images = []
@@ -97,7 +99,8 @@ for image_path in image_paths:
 
     img_path = Path(image_path)
     file_name = img_path.stem
-    out_dir = Path("outputs") / output_foldername / file_name
+    out_dir = output_root / file_name
+    print(f"Output directory: {out_dir.resolve()}")
 
     # try:
     with torch.amp.autocast(enabled=False, device_type="cuda"):
@@ -131,6 +134,7 @@ for image_path in image_paths:
     with torch.amp.autocast(enabled=False, device_type="cuda"):
         scene = get_scene(out_dir, max_faces=int(1e18))
     scene.export(os.path.join(out_dir, "humanscene.ply"))
+    print(f"Saved outputs to: {out_dir.resolve()}")
 
     
 print("Failed images: ", failed_images)
