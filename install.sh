@@ -38,3 +38,6 @@ uv run --no-sync mim install "mmengine>=0.7.1,<1.0.0"
 uv run --no-sync mim install "mmcv>=2.0.0,<2.2.0" --no-build-isolation
 uv run --no-sync mim install "mmdet>=3.0.0,<3.3.0"
 uv run --no-sync mim install "mmpose==1.3.2" --no-deps
+
+uv pip install "transformers==4.48.3"
+uv run --no-sync python -c "import transformers; from transformers.utils import FLAX_WEIGHTS_NAME; assert transformers.__version__ == '4.48.3', transformers.__version__; print('transformers', transformers.__version__)"

@@ -102,4 +102,8 @@ RUN --mount=type=cache,target=/root/.cache/uv \
     uv run --no-sync mim install "mmdet>=3.0.0,<3.3.0" && \
     uv run --no-sync mim install "mmpose==1.3.2" --no-deps
 
+RUN --mount=type=cache,target=/root/.cache/uv \
+    uv pip install --python /opt/physic/.venv/bin/python "transformers==4.48.3" && \
+    /opt/physic/.venv/bin/python -c "import transformers; from transformers.utils import FLAX_WEIGHTS_NAME; assert transformers.__version__ == '4.48.3', transformers.__version__; print('transformers', transformers.__version__)"
+
 CMD ["uv", "run", "--no-sync", "python", "run_optimizer.py"]
