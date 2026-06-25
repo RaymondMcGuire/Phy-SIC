@@ -23,6 +23,8 @@ PROJECT_ROOT = Path(__file__).resolve().parent
 enable_offload = not bool(os.getenv("DISABLE_OFFLOAD"))
 OMNI_DEVICE = os.getenv("PHYSIC_OMNI_DEVICE", "cuda")
 OMNI_OFFLOAD = os.getenv("PHYSIC_OMNI_OFFLOAD", "model").lower()
+OMNI_IMAGE_SIZE = int(os.getenv("PHYSIC_OMNI_IMAGE_SIZE", "1024"))
+OMNI_STEPS = int(os.getenv("PHYSIC_OMNI_STEPS", "28"))
 
 
 def _hf_cache_dir() -> Path:
@@ -160,7 +162,7 @@ def delete_omni():
 def get_inpainted_image_omni(image, mask):
     """
     Inpaints an image using a diffusion pipeline with a control mask.
-    This function takes an input image and a corresponding mask, resizes them to 1024x1024,
+    This function takes an input image and a corresponding mask, resizes them to a square,
     and then applies an inpainting process using a pre-configured diffusion model pipeline.
     A fixed prompt ("There is nothing here.") and a constant random seed are used for the inpainting.
     After processing, the inpainted image is resized back to the original image dimensions.
@@ -184,30 +186,39 @@ def get_inpainted_image_omni(image, mask):
     prompt = "There is nothing here."
 
     original_size = image.size
-    image = image.convert("RGB").resize((1024, 1024), Image.LANCZOS)
-    mask = mask.convert("RGB").resize((1024, 1024), Image.LANCZOS)
+    target_size = (OMNI_IMAGE_SIZE, OMNI_IMAGE_SIZE)
+    image = image.convert("RGB").resize(target_size, Image.LANCZOS)
+    mask = mask.convert("RGB").resize(target_size, Image.LANCZOS)
 
     generator = torch.Generator(device=OMNI_DEVICE).manual_seed(42)
 
     # Inpaint
+    print(
+        f"[OmniEraser] Starting pipeline: size={OMNI_IMAGE_SIZE}, "
+        f"steps={OMNI_STEPS}, device={OMNI_DEVICE}, offload={OMNI_OFFLOAD}",
+        flush=True,
+    )
     result = pipe(
         prompt=prompt,
         control_image=image,
         control_mask=mask,
-        num_inference_steps=28,
+        num_inference_steps=OMNI_STEPS,
         guidance_scale=3.5,
         generator=generator,
         max_sequence_length=512,
         height=image.size[1],
         width=image.size[0],
     ).images[0]
+    print("[OmniEraser] Pipeline returned image.", flush=True)
 
     # Resize back to original size
     result = result.resize(original_size, Image.LANCZOS)
+    print("[OmniEraser] Resized inpainted image.", flush=True)
 
     if enable_offload and not cpu_offload_enabled:
         pipe.to("cpu")
         torch.cuda.empty_cache()
+        print("[OmniEraser] Moved pipeline back to CPU.", flush=True)
 
     return result
 
