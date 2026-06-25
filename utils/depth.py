@@ -5,6 +5,7 @@ from dataclasses import replace
 from pathlib import Path
 
 import torch
+import torch.nn.functional as F
 import numpy as np
 
 import depth_pro
@@ -17,8 +18,6 @@ from .utils import (
     align_points_pt,
 )
 
-from moge.model.v1 import MoGeModel
-
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 DEPTH_PRO_CHECKPOINT = Path(
     os.getenv("DEPTH_PRO_CHECKPOINT", PROJECT_ROOT / "data" / "depth_pro.pt")
@@ -27,6 +26,7 @@ if not DEPTH_PRO_CHECKPOINT.is_absolute():
     DEPTH_PRO_CHECKPOINT = PROJECT_ROOT / DEPTH_PRO_CHECKPOINT
 
 enable_offload = not bool(os.getenv("DISABLE_OFFLOAD"))
+MOGE_ATTENTION = os.getenv("PHYSIC_MOGE_ATTENTION", "sdpa").lower()
 
 
 def _torch_load_accepts_weights_only() -> bool:
@@ -115,12 +115,92 @@ def _resolve_local_hf_file(repo_id: str, filenames: tuple[str, ...]) -> str:
     )
 
 
+def _force_math_sdp_attention():
+    if not torch.cuda.is_available():
+        return
+
+    torch.backends.cuda.enable_flash_sdp(False)
+    torch.backends.cuda.enable_mem_efficient_sdp(False)
+    torch.backends.cuda.enable_math_sdp(True)
+    if hasattr(torch.backends.cuda, "enable_cudnn_sdp"):
+        torch.backends.cuda.enable_cudnn_sdp(False)
+
+
+def _memory_efficient_attention_sdpa(
+    query,
+    key,
+    value,
+    attn_bias=None,
+    p=0.0,
+    scale=None,
+    op=None,
+    output_dtype=None,
+):
+    if attn_bias is not None and not isinstance(attn_bias, torch.Tensor):
+        raise NotImplementedError(
+            "The local PyTorch SDPA fallback only supports tensor attention masks."
+        )
+
+    squeeze_head = False
+    if query.ndim == 3:
+        query = query.unsqueeze(2)
+        key = key.unsqueeze(2)
+        value = value.unsqueeze(2)
+        squeeze_head = True
+    elif query.ndim != 4:
+        raise NotImplementedError(
+            f"Unsupported xFormers attention tensor rank for SDPA fallback: {query.ndim}"
+        )
+
+    query = query.permute(0, 2, 1, 3)
+    key = key.permute(0, 2, 1, 3)
+    value = value.permute(0, 2, 1, 3)
+
+    out = F.scaled_dot_product_attention(
+        query,
+        key,
+        value,
+        attn_mask=attn_bias,
+        dropout_p=p,
+        scale=scale,
+    )
+    out = out.permute(0, 2, 1, 3)
+    if squeeze_head:
+        out = out.squeeze(2)
+    if output_dtype is not None:
+        out = out.to(output_dtype)
+    return out
+
+
+def _patch_xformers_attention_for_moge():
+    if MOGE_ATTENTION != "sdpa":
+        return
+
+    _force_math_sdp_attention()
+    try:
+        import xformers.ops as xops
+        import xformers.ops.fmha as fmha
+    except Exception:
+        return
+
+    if getattr(xops, "_physic_sdpa_patched", False):
+        return
+
+    xops.memory_efficient_attention = _memory_efficient_attention_sdpa
+    fmha.memory_efficient_attention = _memory_efficient_attention_sdpa
+    xops._physic_sdpa_patched = True
+    print("[MoGe] Patched xFormers attention to PyTorch SDPA fallback.", flush=True)
+
+
 # Load the model from the pre-downloaded Hugging Face cache.
 def load_moge(device="cuda"):
     global moge_model
     if "moge_model" in globals() and moge_model is not None:
         pass
     else:
+        _patch_xformers_attention_for_moge()
+        from moge.model.v1 import MoGeModel
+
         # moge_model = MoGeModel.from_pretrained("Ruicheng/moge-2-vitl")
         moge_model = MoGeModel.from_pretrained(
             _resolve_local_hf_file("Ruicheng/moge-vitl", ("model.pt",))
@@ -187,6 +267,7 @@ def run_moge(image, device="cuda"):
     if enable_offload:
         moge_model.cuda()
     moge_model.eval()
+    _patch_xformers_attention_for_moge()
 
     # Read the input image and convert to tensor (3, H, W) and normalize to [0, 1]
     input_image = (
@@ -202,7 +283,9 @@ def run_moge(image, device="cuda"):
         raise ValueError("Input image shape not supported")
 
     # Infer
+    print(f"[MoGe] Running inference on {device} with attention={MOGE_ATTENTION}.", flush=True)
     output = moge_model.infer(input_image)
+    print("[MoGe] Inference complete.", flush=True)
     depth = output["depth"].detach().cpu().numpy()
     pointmap = output["points"].detach().cpu().numpy()
     intrinsics = output["intrinsics"].detach().cpu().numpy()
