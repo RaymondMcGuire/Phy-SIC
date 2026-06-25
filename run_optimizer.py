@@ -134,6 +134,16 @@ for image_path in image_paths:
     with torch.amp.autocast(enabled=False, device_type="cuda"):
         scene = get_scene(out_dir, max_faces=int(1e18))
     scene.export(os.path.join(out_dir, "humanscene.ply"))
+    scene.export(os.path.join(out_dir, "humanscene.glb"))
+
+    with torch.amp.autocast(enabled=False, device_type="cuda"):
+        scene_only, human_only = get_scene(
+            out_dir, separate_human_scene=True, max_faces=int(1e18)
+        )
+    scene_only.export(os.path.join(out_dir, "scene_only.ply"))
+    scene_only.export(os.path.join(out_dir, "scene_only.glb"))
+    human_only.export(os.path.join(out_dir, "human_only.ply"))
+    human_only.export(os.path.join(out_dir, "human_only.glb"))
     print(f"Saved outputs to: {out_dir.resolve()}")
 
     

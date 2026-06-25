@@ -13,6 +13,52 @@ docker compose build physic
 docker compose run --rm physic
 ```
 
+If you use WSL but downloaded data on Windows, edit `.env` before running:
+
+```env
+PHYSIC_DATA_DIR=/mnt/d/SMPL-project/Phy-SIC/data
+PHYSIC_IMAGES_DIR=./images
+PHYSIC_OUTPUTS_DIR=./outputs
+```
+
+For lower-memory FLUX/OmniEraser runs, keep these runtime settings in `.env`:
+
+```env
+PHYSIC_MEM_LIMIT=64g
+PHYSIC_OMNI_DEVICE=cuda:1
+PHYSIC_OMNI_OFFLOAD=sequential
+PHYSIC_OMNI_IMAGE_SIZE=768
+PHYSIC_OMNI_STEPS=20
+PHYSIC_MOGE_ATTENTION=sdpa
+PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True
+```
+
+Check that Compose sees the intended values:
+
+```sh
+docker compose config | grep -E "PHYSIC_OMNI|PHYSIC_MOGE|PYTORCH_CUDA_ALLOC_CONF|mem_limit"
+```
+
+Build or rebuild the image:
+
+```sh
+docker compose build physic
+```
+
+Run the full pipeline:
+
+```sh
+docker compose run --rm physic
+```
+
+Outputs are written to:
+
+```text
+outputs/<run_name>/<image_stem>/
+```
+
+The default config writes to `outputs/wild_results/<image_stem>/`.
+
 To pre-download runtime Hugging Face models into the mounted data cache on Windows, accept/request access for `black-forest-labs/FLUX.1-dev` and `theSure/Omnieraser`, set `HF_TOKEN` in `.env`, and run:
 
 ```bat
@@ -49,6 +95,32 @@ docker compose build physic --progress=plain
 ```
 
 The compose file also defaults the runtime container to `PHYSIC_CPUS=8` and `PHYSIC_MEM_LIMIT=32g`. These limits do not fully cap Docker BuildKit during image build; for build-time memory pressure, also set Docker Desktop or WSL resource limits.
+
+#### Export existing results
+
+Completed result folders contain `scene_data_final.pkl` and `scene_image.png`. To regenerate mesh exports without rerunning the expensive pipeline:
+
+```sh
+docker compose run --rm --no-deps --entrypoint /bin/bash physic -lc \
+  'uv run --no-sync python export_results.py outputs/wild_results/man_couch'
+```
+
+To scan and export all completed folders under the default run:
+
+```sh
+docker compose run --rm --no-deps --entrypoint /bin/bash physic -lc \
+  'uv run --no-sync python export_results.py outputs/wild_results'
+```
+
+The export script writes:
+
+```text
+humanscene.ply/.glb
+scene_only.ply/.glb
+human_only.ply/.glb
+```
+
+The meshes use vertex colors, not UV texture maps. Prefer importing `.glb` into Blender when you want the vertex colors to show automatically.
 
 #### Local uv setup
 If you want a local Linux/WSL environment instead of Docker, install uv first and then run:

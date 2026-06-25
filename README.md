@@ -49,13 +49,109 @@ fetch_hf_data.bat
 This creates a lightweight `.hf-download-venv` for `huggingface_hub` only, downloads into the local `data/` folder, and lets Docker read the same files through `PHYSIC_DATA_DIR`. Public runtime repos such as MoGe, GroundingDINO, and WiLoR-mini are included. `black-forest-labs/FLUX.1-dev` and `theSure/Omnieraser` are gated/restricted on Hugging Face, so `fetch_hf_data.bat` downloads them by default and needs `HF_TOKEN` in `.env` after accepting/requesting access on both model pages. Docker runtime is forced offline for Hugging Face and does not receive the token.
 
 ### Running the Code
-To run the code, please copy images to the `images/` directory. Then, execute the following command:
+To run the code, copy images to the `images/` directory. Then execute:
+
 ```bash
 docker compose run --rm physic
 ```
-For a local uv environment, use `uv run --no-sync python run_optimizer.py`.
 
-This will save the results in the `outputs/` directory.
+For a local uv environment, use:
+
+```bash
+uv run --no-sync python run_optimizer.py
+```
+
+Results are saved under:
+
+```text
+outputs/<run_name>/<image_stem>/
+```
+
+For the default config, this is usually:
+
+```text
+outputs/wild_results/<image_stem>/
+```
+
+Each completed image folder contains:
+
+```text
+scene_image.png          # OmniEraser inpainted scene image
+scene_data_final.pkl     # saved numerical reconstruction data
+humanscene.ply/.glb      # combined scene + human
+scene_only.ply/.glb      # scene only, vertex-colored
+human_only.ply/.glb      # SMPL-X human only, gray
+```
+
+The exported meshes use vertex colors, not UV texture maps. Blender usually reads the `.glb` files more reliably than `.ply` for vertex-color display.
+
+### Docker Command Reference
+
+Build the CUDA 12.8 image:
+
+```bash
+docker compose build physic
+```
+
+Run the full pipeline:
+
+```bash
+docker compose run --rm physic
+```
+
+Check the container exit code after a run:
+
+```bash
+echo "EXIT_CODE=$?"
+```
+
+Inspect effective Compose settings:
+
+```bash
+docker compose config | grep -E "PHYSIC_OMNI|PHYSIC_MOGE|PYTORCH_CUDA_ALLOC_CONF|mem_limit"
+```
+
+Recommended low-memory settings for FLUX/OmniEraser in `.env`:
+
+```env
+PHYSIC_MEM_LIMIT=64g
+PHYSIC_OMNI_DEVICE=cuda:1
+PHYSIC_OMNI_OFFLOAD=sequential
+PHYSIC_OMNI_IMAGE_SIZE=768
+PHYSIC_OMNI_STEPS=20
+PHYSIC_MOGE_ATTENTION=sdpa
+PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True
+```
+
+### Export Existing Results
+
+If `scene_data_final.pkl` and `scene_image.png` already exist, you can regenerate PLY/GLB files without rerunning the full optimization:
+
+```bash
+docker compose run --rm --no-deps --entrypoint /bin/bash physic -lc \
+  'uv run --no-sync python export_results.py outputs/wild_results/man_couch'
+```
+
+Export every completed result under `outputs/wild_results`:
+
+```bash
+docker compose run --rm --no-deps --entrypoint /bin/bash physic -lc \
+  'uv run --no-sync python export_results.py outputs/wild_results'
+```
+
+Only export GLB files:
+
+```bash
+docker compose run --rm --no-deps --entrypoint /bin/bash physic -lc \
+  'uv run --no-sync python export_results.py outputs/wild_results --formats glb'
+```
+
+Only export the merged human-scene asset:
+
+```bash
+docker compose run --rm --no-deps --entrypoint /bin/bash physic -lc \
+  'uv run --no-sync python export_results.py outputs/wild_results --merged-only'
+```
  
 ## Roadmap
 
