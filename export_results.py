@@ -67,15 +67,21 @@ def export_result_dir(
     formats: list[str],
     max_faces: int,
     separated: bool,
+    split_humans: bool,
+    coordinate_system: str,
 ) -> None:
     import torch
 
-    from utils.vis import get_scene
+    from utils.vis import get_individual_human_scenes, get_scene
 
     print(f"[export] Result directory: {result_dir.resolve()}")
 
     with torch.amp.autocast(enabled=False, device_type="cuda"):
-        merged_scene = get_scene(result_dir, max_faces=max_faces)
+        merged_scene = get_scene(
+            result_dir,
+            max_faces=max_faces,
+            coordinate_system=coordinate_system,
+        )
     _export_scene(merged_scene, result_dir / "humanscene", formats)
 
     if separated:
@@ -84,9 +90,20 @@ def export_result_dir(
                 result_dir,
                 separate_human_scene=True,
                 max_faces=max_faces,
+                coordinate_system=coordinate_system,
             )
         _export_scene(scene_only, result_dir / "scene_only", formats)
         _export_scene(human_only, result_dir / "human_only", formats)
+
+        if split_humans:
+            with torch.amp.autocast(enabled=False, device_type="cuda"):
+                human_scenes = get_individual_human_scenes(
+                    result_dir,
+                    max_faces=max_faces,
+                    coordinate_system=coordinate_system,
+                )
+            for idx, human_scene in enumerate(human_scenes, start=1):
+                _export_scene(human_scene, result_dir / f"human_{idx}", formats)
 
 
 def main() -> int:
@@ -120,7 +137,25 @@ def main() -> int:
     parser.add_argument(
         "--merged-only",
         action="store_true",
-        help="Only export humanscene.* and skip scene_only.* / human_only.*.",
+        help=(
+            "Only export humanscene.* and skip scene_only.*, human_only.*, "
+            "and per-person human_N.* files."
+        ),
+    )
+    parser.add_argument(
+        "--no-split-humans",
+        action="store_true",
+        help="Skip per-person human_1.* / human_2.* exports.",
+    )
+    parser.add_argument(
+        "--coordinate-system",
+        default="gltf",
+        choices=["camera", "gltf", "blender"],
+        help=(
+            "Output axis basis. 'camera' keeps legacy Phy-SIC camera coordinates; "
+            "'gltf' is recommended for GLB import into Blender/Unity; "
+            "'blender' writes raw Blender-native Z-up vertices. Default: gltf."
+        ),
     )
     args = parser.parse_args()
 
@@ -138,6 +173,8 @@ def main() -> int:
             formats=formats,
             max_faces=args.max_faces,
             separated=not args.merged_only,
+            split_humans=not args.no_split_humans,
+            coordinate_system=args.coordinate_system,
         )
 
     print(f"[export] Done. Exported {len(result_dirs)} result folder(s).")

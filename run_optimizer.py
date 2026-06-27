@@ -9,7 +9,7 @@ from pathlib import Path
 
 from omegaconf import OmegaConf
 import torch
-from utils.vis import get_scene
+from utils.vis import get_individual_human_scenes, get_scene
 
 def get_gpu_memory():
     try:
@@ -131,19 +131,40 @@ for image_path in image_paths:
     with open(x.outpath / "scene_data_final.pkl", "wb") as f:
         pickle.dump(data, f)
 
+    export_coordinate_system = cfg.get("export_coordinate_system", "gltf")
+    export_split_humans = cfg.get("export_split_humans", True)
+
     with torch.amp.autocast(enabled=False, device_type="cuda"):
-        scene = get_scene(out_dir, max_faces=int(1e18))
+        scene = get_scene(
+            out_dir,
+            max_faces=int(1e18),
+            coordinate_system=export_coordinate_system,
+        )
     scene.export(os.path.join(out_dir, "humanscene.ply"))
     scene.export(os.path.join(out_dir, "humanscene.glb"))
 
     with torch.amp.autocast(enabled=False, device_type="cuda"):
         scene_only, human_only = get_scene(
-            out_dir, separate_human_scene=True, max_faces=int(1e18)
+            out_dir,
+            separate_human_scene=True,
+            max_faces=int(1e18),
+            coordinate_system=export_coordinate_system,
         )
     scene_only.export(os.path.join(out_dir, "scene_only.ply"))
     scene_only.export(os.path.join(out_dir, "scene_only.glb"))
     human_only.export(os.path.join(out_dir, "human_only.ply"))
     human_only.export(os.path.join(out_dir, "human_only.glb"))
+
+    if export_split_humans:
+        with torch.amp.autocast(enabled=False, device_type="cuda"):
+            human_scenes = get_individual_human_scenes(
+                out_dir,
+                max_faces=int(1e18),
+                coordinate_system=export_coordinate_system,
+            )
+        for idx, human_scene in enumerate(human_scenes, start=1):
+            human_scene.export(os.path.join(out_dir, f"human_{idx}.ply"))
+            human_scene.export(os.path.join(out_dir, f"human_{idx}.glb"))
     print(f"Saved outputs to: {out_dir.resolve()}")
 
     

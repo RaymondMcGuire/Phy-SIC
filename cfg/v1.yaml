@@ -8,6 +8,8 @@ body_model: SMPLX
 max_img_size: 1024
 flip_image: false
 inpaint_model: omni
+export_coordinate_system: gltf
+export_split_humans: true
 
 # keypoints related
 keypoint_threshold: 0.5

@@ -81,9 +81,13 @@ scene_data_final.pkl     # saved numerical reconstruction data
 humanscene.ply/.glb      # combined scene + human
 scene_only.ply/.glb      # scene only, vertex-colored
 human_only.ply/.glb      # SMPL-X human only, gray
+human_1.ply/.glb         # first SMPL-X human only
+human_2.ply/.glb         # second SMPL-X human only, etc. when present
 ```
 
 The exported meshes use vertex colors, not UV texture maps. Blender usually reads the `.glb` files more reliably than `.ply` for vertex-color display.
+
+Exports default to `export_coordinate_system: gltf`, which converts the internal camera coordinates to a GLB-friendly Y-up basis for Blender/Unity importers. Set `export_coordinate_system: camera` in `cfg/v1.yaml`, or pass `--coordinate-system camera` to `export_results.py`, to keep the legacy raw camera-coordinate output.
 
 ### Docker Command Reference
 
@@ -144,6 +148,13 @@ Only export GLB files:
 ```bash
 docker compose run --rm --no-deps --entrypoint /bin/bash physic -lc \
   'uv run --no-sync python export_results.py outputs/wild_results --formats glb'
+```
+
+Keep legacy camera coordinates instead of the default GLB-friendly axes:
+
+```bash
+docker compose run --rm --no-deps --entrypoint /bin/bash physic -lc \
+  'uv run --no-sync python export_results.py outputs/wild_results --coordinate-system camera'
 ```
 
 Only export the merged human-scene asset:

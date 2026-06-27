@@ -13,6 +13,56 @@ from scipy.spatial import cKDTree
 import pickle
 from pathlib import Path
 
+COORDINATE_SYSTEM_ALIASES = {
+    "raw": "camera",
+    "cv": "camera",
+    "opencv": "camera",
+    "engine": "gltf",
+    "engines": "gltf",
+    "unity": "gltf",
+    "blender-glb": "gltf",
+}
+
+COORDINATE_TRANSFORMS = {
+    # Current Phy-SIC camera/image coordinates: X right, Y down, Z forward.
+    "camera": np.eye(3, dtype=np.float32),
+    # glTF/OpenGL-style coordinates: X right, Y up, Z backward. This is the
+    # recommended export basis for GLB files imported by Blender or Unity.
+    "gltf": np.array(
+        [[1.0, 0.0, 0.0], [0.0, -1.0, 0.0], [0.0, 0.0, -1.0]],
+        dtype=np.float32,
+    ),
+    # Blender-native coordinates for formats that are imported as raw vertices.
+    "blender": np.array(
+        [[1.0, 0.0, 0.0], [0.0, 0.0, 1.0], [0.0, -1.0, 0.0]],
+        dtype=np.float32,
+    ),
+}
+
+
+def normalize_coordinate_system(coordinate_system: str = "camera") -> str:
+    coordinate_system = (coordinate_system or "camera").lower()
+    coordinate_system = COORDINATE_SYSTEM_ALIASES.get(
+        coordinate_system, coordinate_system
+    )
+    if coordinate_system not in COORDINATE_TRANSFORMS:
+        choices = ", ".join(sorted(COORDINATE_TRANSFORMS))
+        raise ValueError(
+            f"Unsupported coordinate system '{coordinate_system}'. "
+            f"Expected one of: {choices}"
+        )
+    return coordinate_system
+
+
+def transform_mesh_coordinates(vertices, faces, coordinate_system: str = "camera"):
+    coordinate_system = normalize_coordinate_system(coordinate_system)
+    transform = COORDINATE_TRANSFORMS[coordinate_system]
+    vertices = np.asarray(vertices) @ transform.T
+    faces = np.asarray(faces)
+    if np.linalg.det(transform) < 0:
+        faces = faces[:, [0, 2, 1]]
+    return vertices, faces.copy()
+
 smplx_layer = smplx.SMPLXLayer(model_path='data/body_models/smplx/SMPLX_NEUTRAL.npz', num_betas=10, use_face_contour = True).cuda()
 
 from .geometry import rot6d_to_rotmat
@@ -324,7 +374,14 @@ def frames_to_gif(all_frames, fps=5, loop=0):
     return gif_buffer
 
 
-def get_scene_mesh(frame_path, load_floor_points: bool = True, separate_human_scene: bool = False, max_faces: int = 100000):
+def get_scene_mesh(
+    frame_path,
+    load_floor_points: bool = True,
+    separate_human_scene: bool = False,
+    max_faces: int = 100000,
+    coordinate_system: str = "camera",
+    split_humans: bool = False,
+):
     """
     Generate a textured 3D mesh from depth and floor point predictions for a given scene.
 
@@ -402,19 +459,53 @@ def get_scene_mesh(frame_path, load_floor_points: bool = True, separate_human_sc
     faces_human = []
     vertices_human = []
     colours_human = []
+    human_meshes = []
+    human_vertex_offset = 0
 
     for i in range(len(output_final.vertices)):
         untransformed_final_verts = output_final.vertices[i].detach().cpu().numpy()
+        human_faces = smplx_layer.faces.copy()
+        human_colours = np.tile(
+            np.array([(188/255), (188/255), (188/255)], dtype=np.float32),
+            (untransformed_final_verts.shape[0], 1),
+        )
 
-        faces_human.append(smplx_layer.faces + i * untransformed_final_verts.shape[0])
+        faces_human.append(human_faces + human_vertex_offset)
         vertices_human.append(untransformed_final_verts)
-        colours_human.append(np.tile(np.array([(188/255), (188/255), (188/255)], dtype=np.float32), (untransformed_final_verts.shape[0], 1)))
+        colours_human.append(human_colours)
+        human_meshes.append((untransformed_final_verts, human_faces, human_colours))
+        human_vertex_offset += untransformed_final_verts.shape[0]
 
     faces_human = np.concatenate(faces_human, axis=0)
     vertices_human = np.concatenate(vertices_human, axis=0)
     colours_human = np.concatenate(colours_human, axis=0)
 
+    vertices, faces = transform_mesh_coordinates(vertices, faces, coordinate_system)
+    vertices_human, faces_human = transform_mesh_coordinates(
+        vertices_human, faces_human, coordinate_system
+    )
+    if split_humans:
+        transformed_human_meshes = []
+        for human_vertices, human_faces, human_colours in human_meshes:
+            human_vertices, human_faces = transform_mesh_coordinates(
+                human_vertices, human_faces, coordinate_system
+            )
+            transformed_human_meshes.append(
+                (human_vertices, human_faces, human_colours)
+            )
+        human_meshes = transformed_human_meshes
+
     if separate_human_scene:
+        if split_humans:
+            return (
+                vertices,
+                faces,
+                colours,
+                vertices_human,
+                faces_human,
+                colours_human,
+                human_meshes,
+            )
         return vertices, faces, colours, vertices_human, faces_human, colours_human
     else:
         # Combine human and scene meshes
@@ -425,28 +516,66 @@ def get_scene_mesh(frame_path, load_floor_points: bool = True, separate_human_sc
     return vertices, faces, colours
 
 
-def get_scene(frame_path, separate_human_scene=False, max_faces=100000):
+def _mesh_scene(vertices, faces, colours):
+    vertex_colors = (colours * 255).astype(np.uint8)
+    mesh = trimesh.Trimesh(vertices=vertices, faces=faces, vertex_colors=vertex_colors)
+    return mesh.scene()
+
+
+def get_scene(
+    frame_path,
+    separate_human_scene=False,
+    max_faces=100000,
+    coordinate_system: str = "camera",
+):
     # Ensure the frame_path is a pathlib.Path object
     if not isinstance(frame_path, Path):
         frame_path = Path(frame_path)
     
     if separate_human_scene:
-        vertices, faces, colours, vertices_human, faces_human, colours_human = get_scene_mesh(frame_path, load_floor_points=False, separate_human_scene=True, max_faces=max_faces)
+        vertices, faces, colours, vertices_human, faces_human, colours_human = get_scene_mesh(
+            frame_path,
+            load_floor_points=False,
+            separate_human_scene=True,
+            max_faces=max_faces,
+            coordinate_system=coordinate_system,
+        )
 
-        vertex_colors = (colours * 255).astype(np.uint8)
-        vertex_colors_human = (colours_human * 255).astype(np.uint8)
-
-        mesh = trimesh.Trimesh(vertices=vertices, faces=faces, vertex_colors=vertex_colors)
-        mesh_human = trimesh.Trimesh(vertices=vertices_human, faces=faces_human, vertex_colors=vertex_colors_human)
-        return mesh.scene(), mesh_human.scene()
+        return (
+            _mesh_scene(vertices, faces, colours),
+            _mesh_scene(vertices_human, faces_human, colours_human),
+        )
     
     # Get vertices, faces, and colours from the scene mesh
     else:
-        vertices, faces, colours = get_scene_mesh(frame_path, load_floor_points=False, max_faces=max_faces)
-    
-        # Scale colours from [0,1] to [0,255] and convert to uint8
-        vertex_colors = (colours * 255).astype(np.uint8)
-        
-        # Create a trimesh mesh and return its scene for visualization
-        mesh = trimesh.Trimesh(vertices=vertices, faces=faces, vertex_colors=vertex_colors)
-        return mesh.scene()
+        vertices, faces, colours = get_scene_mesh(
+            frame_path,
+            load_floor_points=False,
+            max_faces=max_faces,
+            coordinate_system=coordinate_system,
+        )
+
+        return _mesh_scene(vertices, faces, colours)
+
+
+def get_individual_human_scenes(
+    frame_path,
+    max_faces=100000,
+    coordinate_system: str = "camera",
+):
+    if not isinstance(frame_path, Path):
+        frame_path = Path(frame_path)
+
+    *_, human_meshes = get_scene_mesh(
+        frame_path,
+        load_floor_points=False,
+        separate_human_scene=True,
+        max_faces=max_faces,
+        coordinate_system=coordinate_system,
+        split_humans=True,
+    )
+
+    return [
+        _mesh_scene(human_vertices, human_faces, human_colours)
+        for human_vertices, human_faces, human_colours in human_meshes
+    ]

@@ -118,9 +118,13 @@ The export script writes:
 humanscene.ply/.glb
 scene_only.ply/.glb
 human_only.ply/.glb
+human_1.ply/.glb
+human_2.ply/.glb, etc. when multiple people are present
 ```
 
 The meshes use vertex colors, not UV texture maps. Prefer importing `.glb` into Blender when you want the vertex colors to show automatically.
+
+By default, mesh exports are converted from Phy-SIC's internal camera coordinates to `gltf` axes, which is better suited for GLB import into Blender/Unity. Use `--coordinate-system camera` when regenerating exports if you need the old raw camera-coordinate orientation.
 
 #### Local uv setup
 If you want a local Linux/WSL environment instead of Docker, install uv first and then run:
